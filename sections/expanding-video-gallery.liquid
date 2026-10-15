@@ -1,0 +1,408 @@
+{%- liquid
+  assign hf = section.settings.heading_font | strip | replace: ' ', '+'
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+  assign active_index = section.settings.default_open | minus: 1
+  if active_index >= section.blocks.size
+    assign active_index = section.blocks.size | minus: 1
+  endif
+-%}
+
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ hf }}:wght@{{ section.settings.heading_weight }}&family={{ bf }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #evg-{{ section.id }} {
+    --evg-heading-font: {% if section.settings.load_google_fonts %}'{{ section.settings.heading_font }}', {% endif %}var(--font-heading-family, sans-serif);
+    --evg-body-font: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    --evg-radius: {{ section.settings.radius }}px;
+    --evg-height: {{ section.settings.height }}px;
+    --evg-grow: {{ section.settings.expanded_size }};
+    background: {{ section.settings.bg_color }};
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+    font-family: var(--evg-body-font);
+  }
+  #evg-{{ section.id }} .evg-inner { max-width: {{ section.settings.max_width }}px; margin: 0 auto; }
+  #evg-{{ section.id }} .evg-head { text-align: center; margin-bottom: 48px; }
+  #evg-{{ section.id }} .evg-eyebrow {
+    font-family: var(--evg-body-font);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: {{ section.settings.eyebrow_color }};
+    margin: 0 0 12px;
+  }
+  #evg-{{ section.id }} .evg-heading {
+    font-family: var(--evg-heading-font);
+    font-weight: {{ section.settings.heading_weight }};
+    font-size: clamp(26px, 4vw, {{ section.settings.heading_size }}px);
+    line-height: 1.1;
+    text-transform: uppercase;
+    color: {{ section.settings.heading_color }};
+    margin: 0;
+  }
+
+  /* ---------- Panels (desktop) ---------- */
+  #evg-{{ section.id }} .evg-row {
+    display: flex;
+    gap: 20px;
+    height: var(--evg-height);
+  }
+  #evg-{{ section.id }} .evg-panel {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    border-radius: var(--evg-radius);
+    overflow: hidden;
+    cursor: pointer;
+    background: #eee;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    transition: flex-grow .6s cubic-bezier(.65,0,.35,1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  #evg-{{ section.id }} .evg-panel.is-active { flex-grow: var(--evg-grow); cursor: default; }
+  #evg-{{ section.id }} .evg-panel:focus-visible { outline: 2px solid {{ section.settings.eyebrow_color }}; outline-offset: 3px; }
+
+  #evg-{{ section.id }} .evg-media,
+  #evg-{{ section.id }} .evg-media video,
+  #evg-{{ section.id }} .evg-media img,
+  #evg-{{ section.id }} .evg-media svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* side fade on collapsed panels */
+  #evg-{{ section.id }} .evg-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(to right, rgba(0,0,0,0) 45%, rgba(0,0,0,.75) 100%);
+    transition: opacity .5s ease;
+    pointer-events: none;
+  }
+  /* bottom fade on the open panel */
+  #evg-{{ section.id }} .evg-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(to top, rgba(0,0,0,.7) 0%, rgba(0,0,0,0) 38%);
+    opacity: 0;
+    transition: opacity .5s ease;
+    pointer-events: none;
+  }
+  #evg-{{ section.id }} .evg-panel.is-active::before { opacity: 0; }
+  #evg-{{ section.id }} .evg-panel.is-active::after { opacity: 1; }
+
+  /* vertical label */
+  #evg-{{ section.id }} .evg-label {
+    position: absolute;
+    z-index: 2;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%) rotate(180deg);
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+    font-family: var(--evg-body-font);
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    transition: opacity .3s ease;
+  }
+  #evg-{{ section.id }} .evg-panel.is-active .evg-label { opacity: 0; transition-delay: 0s; }
+  #evg-{{ section.id }} .evg-panel:not(.is-active) .evg-label { transition-delay: .3s; }
+
+  /* open-panel caption */
+  #evg-{{ section.id }} .evg-caption {
+    position: absolute;
+    z-index: 2;
+    left: 24px;
+    right: 24px;
+    bottom: 22px;
+    text-align: center;
+    color: #fff;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .35s ease, transform .35s ease;
+    pointer-events: none;
+  }
+  #evg-{{ section.id }} .evg-panel.is-active .evg-caption {
+    opacity: 1;
+    transform: none;
+    transition-delay: .35s;
+  }
+  #evg-{{ section.id }} .evg-title {
+    font-family: var(--evg-body-font);
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  #evg-{{ section.id }} .evg-desc {
+    font-family: var(--evg-body-font);
+    font-size: 13.5px;
+    line-height: 1.5;
+    opacity: .92;
+    margin: 0 auto;
+    max-width: 380px;
+  }
+  #evg-{{ section.id }} .evg-desc p { margin: 0; }
+
+  /* ---------- Mobile: vertical accordion ---------- */
+  @media (max-width: 749px) {
+    #evg-{{ section.id }} .evg-head { margin-bottom: 28px; }
+    #evg-{{ section.id }} .evg-row {
+      flex-direction: column;
+      height: auto;
+      gap: 12px;
+    }
+    #evg-{{ section.id }} .evg-panel {
+      flex: none;
+      height: 72px;
+      transition: height .55s cubic-bezier(.65,0,.35,1);
+    }
+    #evg-{{ section.id }} .evg-panel.is-active { height: {{ section.settings.mobile_height }}px; }
+    #evg-{{ section.id }} .evg-panel::before {
+      background: linear-gradient(to right, rgba(0,0,0,.7) 0%, rgba(0,0,0,.2) 100%);
+    }
+    #evg-{{ section.id }} .evg-label {
+      writing-mode: horizontal-tb;
+      transform: translateY(-50%);
+      right: auto;
+      left: 18px;
+      font-size: 15px;
+    }
+    #evg-{{ section.id }} .evg-caption { left: 16px; right: 16px; bottom: 16px; }
+    #evg-{{ section.id }} .evg-title { font-size: 16px; }
+    #evg-{{ section.id }} .evg-desc { font-size: 13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #evg-{{ section.id }} .evg-panel,
+    #evg-{{ section.id }} .evg-caption,
+    #evg-{{ section.id }} .evg-label { transition: none !important; }
+  }
+</style>
+
+<section id="evg-{{ section.id }}">
+  <div class="evg-inner">
+    <div class="evg-head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="evg-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="evg-heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+    </div>
+
+    <div class="evg-row" role="list">
+      {%- for block in section.blocks -%}
+        {%- assign i = forloop.index0 -%}
+        <div
+          class="evg-panel{% if i == active_index %} is-active{% endif %}"
+          role="button"
+          tabindex="0"
+          aria-expanded="{% if i == active_index %}true{% else %}false{% endif %}"
+          aria-label="{{ block.settings.title | escape }}"
+          data-index="{{ i }}"
+          {{ block.shopify_attributes }}
+        >
+          <div class="evg-media">
+            {%- if block.settings.video != blank -%}
+              {{ block.settings.video
+                | video_tag:
+                  autoplay: false,
+                  loop: true,
+                  muted: true,
+                  playsinline: true,
+                  controls: false,
+                  preload: 'metadata',
+                  image_size: '1000x'
+              }}
+            {%- elsif block.settings.video_url != blank -%}
+              <video
+                src="{{ block.settings.video_url }}"
+                {% if block.settings.poster != blank %}poster="{{ block.settings.poster | image_url: width: 1000 }}"{% endif %}
+                loop muted playsinline preload="metadata"
+              ></video>
+            {%- elsif block.settings.poster != blank -%}
+              {{ block.settings.poster | image_url: width: 1200 | image_tag: loading: 'lazy', alt: block.settings.title }}
+            {%- else -%}
+              {{ 'product-apparel-2' | placeholder_svg_tag }}
+            {%- endif -%}
+          </div>
+
+          {%- if block.settings.title != blank -%}
+            <span class="evg-label">{{ block.settings.title }}</span>
+          {%- endif -%}
+
+          <div class="evg-caption">
+            {%- if block.settings.title != blank -%}
+              <h3 class="evg-title">{{ block.settings.title }}</h3>
+            {%- endif -%}
+            {%- if block.settings.text != blank -%}
+              <div class="evg-desc">{{ block.settings.text }}</div>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('evg-{{ section.id }}');
+    if (!root || root.dataset.evgReady) return;
+    root.dataset.evgReady = '1';
+
+    var panels = Array.prototype.slice.call(root.querySelectorAll('.evg-panel'));
+    var playAll = {{ section.settings.play_all | json }};
+
+    function syncVideos() {
+      panels.forEach(function (p) {
+        var v = p.querySelector('video');
+        if (!v) return;
+        v.muted = true;
+        if (playAll || p.classList.contains('is-active')) {
+          var pr = v.play();
+          if (pr && pr.catch) pr.catch(function () {});
+        } else {
+          v.pause();
+        }
+      });
+    }
+
+    function activate(index) {
+      panels.forEach(function (p, i) {
+        var on = i === index;
+        p.classList.toggle('is-active', on);
+        p.setAttribute('aria-expanded', on ? 'true' : 'false');
+      });
+      syncVideos();
+    }
+
+    panels.forEach(function (p, i) {
+      p.addEventListener('click', function () {
+        if (!p.classList.contains('is-active')) activate(i);
+      });
+      p.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(i); }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); var n = Math.min(i + 1, panels.length - 1); activate(n); panels[n].focus(); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); var b = Math.max(i - 1, 0); activate(b); panels[b].focus(); }
+      });
+    });
+
+    /* Only start videos once the section scrolls into view */
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { syncVideos(); }
+          else { panels.forEach(function (p) { var v = p.querySelector('video'); if (v) v.pause(); }); }
+        });
+      }, { threshold: 0.25 });
+      io.observe(root);
+    } else {
+      syncVideos();
+    }
+
+    /* Theme editor: open the block you click in the sidebar */
+    document.addEventListener('shopify:block:select', function (e) {
+      var idx = panels.findIndex(function (p) { return p.contains(e.target) || p === e.target; });
+      if (idx > -1) activate(idx);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Expanding Video Gallery",
+  "tag": "div",
+  "class": "section-expanding-video-gallery",
+  "settings": [
+    { "type": "header", "content": "Content" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow text", "default": "Pediatrician-approved" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Designed for how kids' feet actually grow" },
+    { "type": "range", "id": "default_open", "label": "Panel open by default", "min": 1, "max": 6, "step": 1, "default": 5 },
+    { "type": "checkbox", "id": "play_all", "label": "Play all videos at once", "default": false, "info": "Off = only the open panel plays (faster page)." },
+
+    { "type": "header", "content": "Fonts" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Fonts", "default": true, "info": "Turn off to use your theme's fonts instead." },
+    { "type": "text", "id": "heading_font", "label": "Heading font (Google Font name)", "default": "Oswald" },
+    {
+      "type": "select",
+      "id": "heading_weight",
+      "label": "Heading weight",
+      "options": [
+        { "value": "400", "label": "Regular" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semibold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "700",
+      "info": "Use Regular if your heading font is Anton."
+    },
+    { "type": "text", "id": "body_font", "label": "Body font (Google Font name)", "default": "Inter" },
+
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "height", "label": "Panel height (desktop)", "min": 300, "max": 700, "step": 20, "unit": "px", "default": 400 },
+    { "type": "range", "id": "mobile_height", "label": "Open panel height (mobile)", "min": 240, "max": 600, "step": 20, "unit": "px", "default": 380 },
+    {
+      "type": "select",
+      "id": "expanded_size",
+      "label": "Open panel width",
+      "options": [
+        { "value": "1.6", "label": "Small" },
+        { "value": "2.1", "label": "Medium" },
+        { "value": "2.8", "label": "Large" },
+        { "value": "3.5", "label": "Extra large" }
+      ],
+      "default": "2.1"
+    },
+    { "type": "range", "id": "max_width", "label": "Content width", "min": 800, "max": 1600, "step": 20, "unit": "px", "default": 1260 },
+
+    { "type": "header", "content": "Style" },
+    { "type": "color", "id": "bg_color", "label": "Background", "default": "#FFFFFF" },
+    { "type": "color", "id": "eyebrow_color", "label": "Eyebrow color", "default": "#2B2BE0" },
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#111111" },
+    { "type": "range", "id": "heading_size", "label": "Heading max size", "min": 28, "max": 72, "step": 2, "unit": "px", "default": 38 },
+    { "type": "range", "id": "radius", "label": "Corner radius", "min": 0, "max": 30, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 40 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 48 }
+  ],
+  "blocks": [
+    {
+      "type": "panel",
+      "name": "Video panel",
+      "settings": [
+        { "type": "video", "id": "video", "label": "Video (upload to Shopify)", "info": "Best: MP4, under 10 MB, 5–10 sec loop, no sound." },
+        { "type": "url", "id": "video_url", "label": "Or external video URL (.mp4)", "info": "Used only if no video is uploaded above." },
+        { "type": "image_picker", "id": "poster", "label": "Fallback image / poster", "info": "Shown when using an external URL or no video." },
+        { "type": "text", "id": "title", "label": "Title", "default": "Panel title" },
+        { "type": "richtext", "id": "text", "label": "Description (shown when open)" }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "Expanding Video Gallery",
+      "blocks": [
+        { "type": "panel", "settings": { "title": "Always the Right Size", "text": "<p>The sole expands with your child's foot, so one pair fits through three sizes.</p>" } },
+        { "type": "panel", "settings": { "title": "Room for Toes to Grow", "text": "<p>A wide toe box lets toes spread naturally instead of being squeezed.</p>" } },
+        { "type": "panel", "settings": { "title": "Healthy Posture & Balance", "text": "<p>A flat, flexible sole supports a natural gait and steady balance.</p>" } },
+        { "type": "panel", "settings": { "title": "All day Breathable comfort", "text": "<p>Breathable knit keeps little feet cool and dry from school to playground.</p>" } },
+        { "type": "panel", "settings": { "title": "Soft Cushioning, Barefoot Feel", "text": "<p>SquishyFoam insole absorbs impact while supporting natural foot movement.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

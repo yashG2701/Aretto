@@ -1,0 +1,1346 @@
+{%- liquid
+  assign product = section.settings.product
+  assign hf = section.settings.heading_font | strip | replace: ' ', '+'
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+  assign current_variant = product.selected_or_first_available_variant
+  assign featured_media = current_variant.featured_media | default: product.featured_media
+  assign color_pos = 0
+  assign size_pos = 0
+  for option in product.options_with_values
+    assign oname = option.name | downcase
+    if oname contains 'color' or oname contains 'colour'
+      assign color_pos = option.position
+    elsif oname contains 'size' or oname contains 'age'
+      assign size_pos = option.position
+    endif
+  endfor
+  assign compare_base = current_variant.compare_at_price
+  if compare_base == nil or compare_base <= current_variant.price
+    assign compare_base = current_variant.price
+  endif
+-%}
+{%- if product != blank -%}
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ hf }}:wght@500;600;700&family={{ bf }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #apv-{{ section.id }} {
+    --hf: {% if section.settings.load_google_fonts %}'{{ section.settings.heading_font }}', {% endif %}var(--font-heading-family, sans-serif);
+    --bf: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    --accent: {{ section.settings.accent }};
+    --ink: #111;
+    --muted: #6B6B6B;
+    --line: #E5E5E5;
+    --r: 10px;
+    font-family: var(--bf);
+    color: var(--ink);
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+  }
+  #apv-{{ section.id }} * { box-sizing: border-box; }
+  #apv-{{ section.id }} .apv-wrap {
+    max-width: {{ section.settings.max_width }}px; margin: 0 auto;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr); gap: 32px; align-items: start;
+  }
+  #apv-{{ section.id }} .apv-h {
+    font-family: var(--hf); font-weight: 600; text-transform: uppercase;
+    font-size: 14px; letter-spacing: .01em; margin: 0 0 14px;
+  }
+  #apv-{{ section.id }} .apv-divider { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
+  #apv-{{ section.id }} .apv-block + .apv-block { margin-top: 18px; }
+
+  /* ---------- Gallery ---------- */
+  #apv-{{ section.id }} .apv-left { {% if section.settings.sticky_gallery %}position: sticky; top: 20px;{% endif %} }
+  #apv-{{ section.id }} .apv-gallery { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+  #apv-{{ section.id }} .apv-thumbs { display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; scrollbar-width: none; }
+  #apv-{{ section.id }} .apv-thumbs::-webkit-scrollbar { display: none; }
+  #apv-{{ section.id }} .apv-thumb {
+    flex: 0 0 auto; width: 64px; aspect-ratio: 1; padding: 0; border-radius: 6px; overflow: hidden;
+    border: 2px solid transparent; background: #f3f3f3; cursor: pointer; transition: border-color .2s;
+  }
+  #apv-{{ section.id }} .apv-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #apv-{{ section.id }} .apv-thumb.is-active { border-color: var(--ink); }
+  #apv-{{ section.id }} .apv-main { position: relative; aspect-ratio: {{ section.settings.gallery_ratio }}; border-radius: 12px; overflow: hidden; background: #f3f3f3; }
+  #apv-{{ section.id }} .apv-slide { position: absolute; inset: 0; opacity: 0; transition: opacity .35s ease; pointer-events: none; }
+  #apv-{{ section.id }} .apv-slide.is-active { opacity: 1; pointer-events: auto; }
+  #apv-{{ section.id }} .apv-slide img,
+  #apv-{{ section.id }} .apv-slide video,
+  #apv-{{ section.id }} .apv-slide iframe { width: 100%; height: 100%; object-fit: cover; display: block; border: 0; }
+  #apv-{{ section.id }} .apv-note {
+    display: flex; align-items: center; gap: 14px; margin-top: 18px;
+    background: #EAF6EE; border: 1px solid #CFE9D7; border-radius: var(--r); padding: 14px 18px;
+    font-size: 13.5px; line-height: 1.45; color: #333;
+  }
+  #apv-{{ section.id }} .apv-note strong { color: #1E9E4A; font-weight: 600; }
+  #apv-{{ section.id }} .apv-note p { margin: 0; }
+  #apv-{{ section.id }} .apv-ic {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: #fff;
+  }
+  #apv-{{ section.id }} .apv-ic svg { width: 18px; height: 18px; }
+
+  /* ---------- Header ---------- */
+  #apv-{{ section.id }} .apv-rating { display: flex; align-items: center; gap: 8px; font-size: 13px; text-decoration: none; color: inherit; }
+  #apv-{{ section.id }} .apv-stars { display: inline-flex; gap: 2px; }
+  #apv-{{ section.id }} .apv-star { position: relative; width: 15px; height: 15px; }
+  #apv-{{ section.id }} .apv-star svg { width: 15px; height: 15px; display: block; }
+  #apv-{{ section.id }} .apv-star .e { fill: #D6D6D6; }
+  #apv-{{ section.id }} .apv-star .f { position: absolute; inset: 0; overflow: hidden; }
+  #apv-{{ section.id }} .apv-star .f svg { fill: #333; }
+  #apv-{{ section.id }} .apv-rating u { font-weight: 600; text-underline-offset: 2px; }
+  #apv-{{ section.id }} .apv-rating span.c { color: var(--muted); font-size: 12px; }
+  #apv-{{ section.id }} .apv-eyebrow { font-size: 12.5px; text-transform: uppercase; color: #333; margin: 0 0 6px; }
+  #apv-{{ section.id }} .apv-title {
+    font-family: var(--hf); font-weight: 700; text-transform: uppercase;
+    font-size: clamp(28px, 3.2vw, {{ section.settings.title_size }}px); line-height: 1.05; margin: 0 0 10px;
+  }
+  #apv-{{ section.id }} .apv-tagline { font-weight: 700; font-size: 17px; text-transform: uppercase; margin: 0; }
+  #apv-{{ section.id }} .apv-tagline .hl { color: var(--accent); }
+
+  /* ---------- Price + EMI ---------- */
+  #apv-{{ section.id }} .apv-price-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  #apv-{{ section.id }} .apv-price-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #apv-{{ section.id }} .apv-price { font-family: var(--hf); font-weight: 700; font-size: 24px; }
+  #apv-{{ section.id }} .apv-compare { font-family: var(--hf); font-weight: 500; font-size: 18px; color: #888; text-decoration: line-through; }
+  #apv-{{ section.id }} .apv-save { font-size: 10.5px; font-weight: 700; color: var(--accent); background: #E6E6FD; padding: 4px 8px; border-radius: 20px; text-transform: uppercase; }
+  #apv-{{ section.id }} .apv-persize { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: #333; }
+  #apv-{{ section.id }} .apv-persize b { background: #E7F6EC; color: #1E9E4A; font-weight: 600; font-size: 11px; padding: 4px 9px; border-radius: 20px; }
+  #apv-{{ section.id }} .apv-emi {
+    position: relative; background: #F1F1F3; border-radius: var(--r); padding: 12px 16px; text-align: center; min-width: 210px; font-size: 12px; line-height: 1.5;
+  }
+  #apv-{{ section.id }} .apv-emi p { margin: 0; }
+  #apv-{{ section.id }} .apv-emi .amt { color: #1E9E4A; font-weight: 700; }
+  #apv-{{ section.id }} .apv-emi-new { position: absolute; top: -7px; left: -4px; background: #1E9E4A; color: #fff; font-size: 8px; font-weight: 700; padding: 2px 5px; border-radius: 3px; transform: rotate(-8deg); }
+  #apv-{{ section.id }} .apv-emi-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; font-size: 10px; color: var(--muted); }
+  #apv-{{ section.id }} .apv-emi-btn { background: #4A1D6E; color: #fff; text-decoration: none; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 4px; }
+  #apv-{{ section.id }} .apv-emi-row img { height: 12px; width: auto; }
+
+  /* ---------- Features ---------- */
+  #apv-{{ section.id }} .apv-feats { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 22px; column-gap: 12px; text-align: center; }
+  #apv-{{ section.id }} .apv-feat img { height: {{ section.settings.feature_icon_size }}px; width: auto; max-width: 100%; display: block; margin: 0 auto 8px; object-fit: contain; }
+  #apv-{{ section.id }} .apv-feat span { font-size: 12.5px; color: #333; }
+
+  /* ---------- Options ---------- */
+  #apv-{{ section.id }} .apv-opt { border: 0; padding: 0; margin: 0; min-width: 0; }
+  #apv-{{ section.id }} .apv-opt + .apv-opt { margin-top: 22px; }
+  #apv-{{ section.id }} .apv-opt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  #apv-{{ section.id }} .apv-opt-head .apv-h { margin: 0; }
+  #apv-{{ section.id }} .apv-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+  #apv-{{ section.id }} .apv-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  #apv-{{ section.id }} .apv-swatch {
+    width: 54px; height: 50px; border-radius: 6px; overflow: hidden; cursor: pointer; background: #EEE;
+    border: 1.5px solid transparent; outline: 1px solid transparent; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;
+  }
+  #apv-{{ section.id }} .apv-swatch img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #apv-{{ section.id }} input:checked + .apv-swatch { border-color: var(--ink); }
+  #apv-{{ section.id }} input:focus-visible + .apv-swatch,
+  #apv-{{ section.id }} input:focus-visible + .apv-size { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #apv-{{ section.id }} .apv-swatch.is-oos { opacity: .4; }
+
+  #apv-{{ section.id }} .apv-sizes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  #apv-{{ section.id }} .apv-size {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 44px; padding: 6px 4px; border: 1px solid #DCDCDC; border-radius: 6px; cursor: pointer; background: #fff;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  #apv-{{ section.id }} .apv-size b { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  #apv-{{ section.id }} .apv-size small { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+  #apv-{{ section.id }} .apv-size:hover { border-color: #999; }
+  #apv-{{ section.id }} input:checked + .apv-size { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #apv-{{ section.id }} input:checked + .apv-size small { color: rgba(255,255,255,.8); }
+  #apv-{{ section.id }} .apv-size.is-oos { color: #AAA; background: repeating-linear-gradient(135deg, #fff 0 6px, #F5F5F5 6px 7px); }
+  #apv-{{ section.id }} .apv-low {
+    position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #fff; font-size: 7.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; letter-spacing: .03em;
+  }
+  #apv-{{ section.id }} .apv-low[hidden] { display: none; }
+  #apv-{{ section.id }} .apv-fms {
+    display: inline-flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; cursor: pointer;
+  }
+  #apv-{{ section.id }} .apv-fms span {
+    background: #111; color: #fff; font-family: var(--hf); font-weight: 600; font-size: 12px; text-transform: uppercase; padding: 7px 10px; border-radius: 3px;
+  }
+  #apv-{{ section.id }} .apv-fms svg { width: 18px; height: 18px; }
+  #apv-{{ section.id }} .apv-stock { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 11.5px; color: #555; }
+  #apv-{{ section.id }} .apv-stock::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  #apv-{{ section.id }} .apv-stock[hidden] { display: none; }
+  #apv-{{ section.id }} .apv-stock b { color: #111; }
+
+  /* ---------- Info boxes ---------- */
+  #apv-{{ section.id }} .apv-box { display: flex; align-items: center; gap: 14px; border-radius: var(--r); padding: 14px 16px; font-size: 12.5px; line-height: 1.45; }
+  #apv-{{ section.id }} .apv-box p { margin: 0; }
+  #apv-{{ section.id }} .apv-box .t { flex: 1; min-width: 0; }
+  #apv-{{ section.id }} .apv-box h4 { font-family: var(--hf); font-weight: 600; text-transform: uppercase; font-size: 14px; margin: 0 0 3px; }
+  #apv-{{ section.id }} .apv-box--green { background: #EAF6EE; border: 1px solid #CFE9D7; }
+  #apv-{{ section.id }} .apv-box--green .apv-ic { background: #1E9E4A; }
+  #apv-{{ section.id }} .apv-box--green strong { color: #1E9E4A; }
+  #apv-{{ section.id }} .apv-box--orange { background: #FFF2E8; border: 1px solid #FBDCC4; }
+  #apv-{{ section.id }} .apv-box--orange .apv-ic { background: #FF7A1A; }
+  #apv-{{ section.id }} .apv-box--purple { background: #F1EDFD; border: 1px solid #E0D8FA; }
+  #apv-{{ section.id }} .apv-box--purple .apv-ic { background: var(--accent); }
+  #apv-{{ section.id }} .apv-box-btn { flex: 0 0 auto; background: #FF7A1A; color: #fff; text-decoration: none; font-size: 11.5px; font-weight: 600; padding: 7px 14px; border-radius: 20px; }
+  #apv-{{ section.id }} .apv-box--green .apv-box-btn { background: #1E9E4A; }
+  #apv-{{ section.id }} .apv-box--purple .apv-box-btn { background: var(--accent); }
+
+  /* ---------- Combos ---------- */
+  #apv-{{ section.id }} .apv-combos { background: #F1EDFD; border: 1px solid #E0D8FA; border-radius: 12px; padding: 16px 12px 12px; }
+  #apv-{{ section.id }} .apv-combos-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 0 2px; }
+  #apv-{{ section.id }} .apv-combos-head .apv-h { margin: 0; }
+  #apv-{{ section.id }} .apv-best { background: #fff; color: var(--accent); font-size: 9.5px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 20px; }
+  #apv-{{ section.id }} .apv-combo { position: relative; display: flex; align-items: center; gap: 12px; padding: 16px 12px 12px; margin-top: 14px; border: 1px solid #DCD3F7; border-radius: 8px; background: #F7F4FF; cursor: pointer; transition: border-color .2s, background .2s; }
+  #apv-{{ section.id }} .apv-combo:first-of-type { margin-top: 4px; }
+  #apv-{{ section.id }} .apv-combo input { width: 14px; height: 14px; accent-color: #111; margin: 0; flex: 0 0 auto; }
+  #apv-{{ section.id }} .apv-combo:has(input:checked) { border-color: #111; background: #E9E3FB; }
+  #apv-{{ section.id }} .apv-combo .info { flex: 1; min-width: 0; }
+  #apv-{{ section.id }} .apv-combo .nm { font-size: 13px; font-weight: 600; display: block; }
+  #apv-{{ section.id }} .apv-combo .pr { font-size: 11.5px; color: var(--muted); }
+  #apv-{{ section.id }} .apv-combo .pr s { margin: 0 2px; }
+  #apv-{{ section.id }} .apv-combo .pr em { font-style: normal; color: #8B5CF6; font-weight: 600; }
+  #apv-{{ section.id }} .apv-combo .off { position: absolute; top: -7px; left: 8px; background: #111; color: #fff; font-size: 8.5px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+  #apv-{{ section.id }} .apv-combo .off[hidden] { display: none; }
+  #apv-{{ section.id }} .apv-combo .pics { display: flex; }
+  #apv-{{ section.id }} .apv-combo .pics img { width: 22px; height: 22px; object-fit: cover; border-radius: 4px; border: 1px solid #fff; margin-left: -6px; background: #fff; }
+  #apv-{{ section.id }} .apv-combos-foot { border-top: 1px solid #DCD3F7; margin-top: 16px; padding-top: 12px; text-align: center; font-size: 11.5px; color: #333; }
+
+  /* ---------- Buy ---------- */
+  #apv-{{ section.id }} .apv-buy { display: grid; grid-template-columns: 112px 1fr; gap: 12px; }
+  #apv-{{ section.id }} .apv-qty { display: flex; align-items: center; justify-content: space-between; border: 1.5px solid #111; border-radius: 8px; height: 44px; }
+  #apv-{{ section.id }} .apv-qty button { width: 34px; height: 100%; background: none; border: 0; font-size: 18px; cursor: pointer; color: #111; }
+  #apv-{{ section.id }} .apv-qty input { width: 30px; border: 0; text-align: center; font-size: 14px; font-weight: 600; background: transparent; -moz-appearance: textfield; }
+  #apv-{{ section.id }} .apv-qty input::-webkit-outer-spin-button,
+  #apv-{{ section.id }} .apv-qty input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #apv-{{ section.id }} .apv-atc {
+    height: 44px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer;
+    font-family: var(--hf); font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; transition: opacity .2s;
+  }
+  #apv-{{ section.id }} .apv-atc:hover { opacity: .9; }
+  #apv-{{ section.id }} .apv-atc:disabled { background: #9A9A9A; cursor: not-allowed; }
+  #apv-{{ section.id }} .apv-atc.is-loading { opacity: .7; pointer-events: none; }
+  #apv-{{ section.id }} .apv-err { color: #D32F2F; font-size: 12.5px; margin: 8px 0 0; }
+  #apv-{{ section.id }} .apv-err:empty { display: none; }
+
+  /* ---------- Pincode ---------- */
+  #apv-{{ section.id }} .apv-pin { display: flex; align-items: center; gap: 8px; background: #F1F1F3; border-radius: 6px; padding: 4px 4px 4px 12px; }
+  #apv-{{ section.id }} .apv-pin svg { width: 14px; height: 14px; color: #777; flex: 0 0 auto; }
+  #apv-{{ section.id }} .apv-pin input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 13px; padding: 8px 0; outline: 0; box-shadow: none; }
+  #apv-{{ section.id }} .apv-pin button { background: #111; color: #fff; border: 0; border-radius: 4px; font-family: var(--hf); font-weight: 600; font-size: 12px; text-transform: uppercase; padding: 7px 10px; cursor: pointer; }
+  #apv-{{ section.id }} .apv-pin-msg { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #555; margin: 10px 0 0; }
+  #apv-{{ section.id }} .apv-pin-msg:empty { display: none; }
+  #apv-{{ section.id }} .apv-pin-msg svg { width: 14px; height: 14px; color: #1E9E4A; flex: 0 0 auto; }
+  #apv-{{ section.id }} .apv-pin-msg b { color: #111; }
+  #apv-{{ section.id }} .apv-pin-msg.is-err { color: #D32F2F; }
+
+  /* ---------- Trust ---------- */
+  #apv-{{ section.id }} .apv-trust { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  #apv-{{ section.id }} .apv-trust > div { padding: 6px 10px; font-size: 11.5px; line-height: 1.35; color: #333; }
+  #apv-{{ section.id }} .apv-trust > div + div { border-left: 1px solid var(--line); }
+  #apv-{{ section.id }} .apv-trust img { height: 34px; width: auto; display: block; margin: 0 auto 8px; }
+
+  /* ---------- Accordion ---------- */
+  #apv-{{ section.id }} .apv-acc { border-bottom: 1px solid var(--line); }
+  #apv-{{ section.id }} .apv-block.is-acc + .apv-block.is-acc { margin-top: 0; }
+  #apv-{{ section.id }} .apv-acc summary {
+    list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 16px 10px;
+    font-family: var(--hf); font-weight: 600; font-size: 14px; text-transform: uppercase;
+  }
+  #apv-{{ section.id }} .apv-acc summary::-webkit-details-marker { display: none; }
+  #apv-{{ section.id }} .apv-acc summary i { position: relative; width: 11px; height: 11px; transition: transform .25s; }
+  #apv-{{ section.id }} .apv-acc summary i::before,
+  #apv-{{ section.id }} .apv-acc summary i::after { content: ""; position: absolute; left: 50%; top: 50%; background: #888; transform: translate(-50%, -50%); }
+  #apv-{{ section.id }} .apv-acc summary i::before { width: 11px; height: 1.3px; }
+  #apv-{{ section.id }} .apv-acc summary i::after { width: 1.3px; height: 11px; }
+  #apv-{{ section.id }} .apv-acc[open] summary i { transform: rotate(45deg); }
+  #apv-{{ section.id }} .apv-acc .c { padding: 0 10px 18px; font-size: 13.5px; line-height: 1.6; color: #444; }
+  #apv-{{ section.id }} .apv-acc .c p:first-child { margin-top: 0; }
+  #apv-{{ section.id }} .apv-acc .c img { max-width: 100%; height: auto; }
+
+  /* ---------- Modal ---------- */
+  #apv-{{ section.id }} dialog { border: 0; border-radius: 14px; padding: 28px; max-width: 640px; width: calc(100% - 32px); max-height: 85vh; }
+  #apv-{{ section.id }} dialog::backdrop { background: rgba(0,0,0,.5); }
+  #apv-{{ section.id }} dialog .x { position: absolute; top: 12px; right: 14px; background: none; border: 0; font-size: 24px; cursor: pointer; line-height: 1; }
+  #apv-{{ section.id }} dialog img { max-width: 100%; height: auto; }
+  #apv-{{ section.id }} dialog table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #apv-{{ section.id }} dialog td, #apv-{{ section.id }} dialog th { border: 1px solid var(--line); padding: 8px; text-align: center; }
+  /* ---------- Size finder popup ---------- */
+  #apv-{{ section.id }} dialog.apv-sf {
+    padding: 0; border: 0; border-radius: 22px; overflow: hidden;
+    width: calc(100% - 24px); max-width: 480px; max-height: 90vh;
+    background: #F3F4F6; color: var(--ink); font-family: var(--bf);
+  }
+  #apv-{{ section.id }} dialog.apv-sf[open] { display: flex; flex-direction: column; }
+  #apv-{{ section.id }} dialog.apv-sf::backdrop { background: rgba(0,0,0,.55); }
+  #apv-{{ section.id }} .sf-head { position: relative; background: #fff; padding: 24px 70px 16px 24px; }
+  #apv-{{ section.id }} .sf-head h3 { font-family: var(--hf); font-weight: 700; font-size: 26px; text-transform: uppercase; line-height: 1.1; margin: 0 0 6px; }
+  #apv-{{ section.id }} .sf-head p { margin: 0; font-size: 13px; color: var(--muted); }
+  #apv-{{ section.id }} .sf-close {
+    position: absolute; top: 20px; right: 20px; width: 34px; height: 34px; border-radius: 50%;
+    border: 0; background: #EDEDED; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #111;
+  }
+  #apv-{{ section.id }} .sf-close svg { width: 15px; height: 15px; }
+  #apv-{{ section.id }} .sf-body { flex: 1; overflow-y: auto; padding: 20px 24px 24px; overscroll-behavior: contain; }
+
+  #apv-{{ section.id }} .sf-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  #apv-{{ section.id }} .sf-step { position: relative; background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 20px 12px 12px; }
+  #apv-{{ section.id }} .sf-tag {
+    position: absolute; top: -8px; left: 10px; background: #111; color: #fff;
+    font-family: var(--hf); font-weight: 600; font-size: 9.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+  }
+  #apv-{{ section.id }} .sf-step svg { width: 20px; height: 20px; color: #8B5CF6; display: block; margin-bottom: 8px; }
+  #apv-{{ section.id }} .sf-step p { margin: 0; font-size: 12.5px; line-height: 1.4; color: #444; }
+
+  #apv-{{ section.id }} .sf-tip { display: flex; gap: 10px; align-items: flex-start; background: #E3EFE8; border-radius: 8px; padding: 12px 14px; margin: 16px 0; font-size: 12.5px; line-height: 1.45; color: #333; }
+  #apv-{{ section.id }} .sf-tip svg { width: 17px; height: 17px; color: #1E9E4A; flex: 0 0 auto; margin-top: 1px; }
+  #apv-{{ section.id }} .sf-tip p { margin: 0; }
+
+  #apv-{{ section.id }} .sf-search { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #E0E0E0; border-radius: 8px; padding: 6px 6px 6px 14px; }
+  #apv-{{ section.id }} .sf-search > svg { width: 18px; height: 18px; color: #555; flex: 0 0 auto; }
+  #apv-{{ section.id }} .sf-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; padding: 8px 0; box-shadow: none; -moz-appearance: textfield; }
+  #apv-{{ section.id }} .sf-search input::-webkit-outer-spin-button,
+  #apv-{{ section.id }} .sf-search input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #apv-{{ section.id }} .sf-search button { background: var(--accent); color: #fff; border: 0; border-radius: 5px; font-family: var(--hf); font-weight: 600; font-size: 13px; text-transform: uppercase; padding: 9px 14px; cursor: pointer; }
+
+  #apv-{{ section.id }} .sf-result { margin-top: 12px; font-size: 13px; line-height: 1.5; color: #333; }
+  #apv-{{ section.id }} .sf-result[hidden] { display: none; }
+  #apv-{{ section.id }} .sf-result .msg { display: flex; gap: 8px; align-items: flex-start; }
+  #apv-{{ section.id }} .sf-result .msg svg { width: 16px; height: 16px; color: #1E9E4A; flex: 0 0 auto; margin-top: 2px; }
+  #apv-{{ section.id }} .sf-result.is-err .msg { color: #D32F2F; }
+  #apv-{{ section.id }} .sf-pick {
+    margin-top: 12px; background: #1E9E4A; color: #fff; border: 0; border-radius: 5px; cursor: pointer;
+    font-family: var(--hf); font-weight: 600; font-size: 13.5px; text-transform: uppercase; padding: 10px 14px;
+  }
+
+  #apv-{{ section.id }} .sf-info { display: flex; gap: 10px; align-items: flex-start; margin: 18px 0 16px; font-size: 13px; line-height: 1.5; color: #444; }
+  #apv-{{ section.id }} .sf-info svg { width: 16px; height: 16px; color: var(--accent); flex: 0 0 auto; margin-top: 2px; }
+  #apv-{{ section.id }} .sf-info p { margin: 0; }
+
+  #apv-{{ section.id }} .sf-table { display: grid; gap: 10px; }
+  #apv-{{ section.id }} .sf-row {
+    display: grid; grid-template-columns: 48px 0.9fr 1.4fr auto; align-items: center; gap: 12px;
+    width: 100%; text-align: left; background: #fff; border: 1.5px solid #E5E7EB; border-radius: 8px; padding: 14px 12px;
+    cursor: pointer; font-family: var(--bf); color: var(--ink); transition: border-color .2s, background .2s;
+  }
+  #apv-{{ section.id }} .sf-row:hover { border-color: #B9B9F7; }
+  #apv-{{ section.id }} .sf-row.is-match { border-color: var(--accent); background: #F3F3FF; }
+  #apv-{{ section.id }} .sf-row.is-current .sf-code { background: var(--accent); color: #fff; }
+  #apv-{{ section.id }} .sf-code { background: #E6E6FD; color: var(--accent); font-weight: 700; font-size: 13px; text-align: center; padding: 7px 0; border-radius: 4px; }
+  #apv-{{ section.id }} .sf-age b, #apv-{{ section.id }} .sf-cm b { display: block; font-size: 14px; font-weight: 700; }
+  #apv-{{ section.id }} .sf-age small, #apv-{{ section.id }} .sf-cm small { font-size: 9.5px; color: var(--muted); text-transform: uppercase; }
+  #apv-{{ section.id }} .sf-cm { text-align: center; }
+  #apv-{{ section.id }} .sf-cm small { text-transform: none; }
+  #apv-{{ section.id }} .sf-intl { font-size: 10px; color: #555; text-align: right; line-height: 1.7; }
+
+  #apv-{{ section.id }} .sf-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: #fff; padding: 16px 24px 20px; box-shadow: 0 -6px 18px rgba(0,0,0,.05); }
+  #apv-{{ section.id }} .sf-foot:empty { display: none; }
+  #apv-{{ section.id }} .sf-card { border-radius: 10px; padding: 14px 12px; text-align: center; }
+  #apv-{{ section.id }} .sf-card p { font-family: var(--hf); font-weight: 600; font-size: 13.5px; text-transform: uppercase; margin: 0 0 10px; }
+  #apv-{{ section.id }} .sf-card a {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    color: #fff; text-decoration: none; font-size: 13px; font-weight: 500; padding: 10px 8px; border-radius: 6px;
+  }
+  #apv-{{ section.id }} .sf-card svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  #apv-{{ section.id }} .sf-card--orange { background: #FFF2E8; border: 1px solid #FBDCC4; }
+  #apv-{{ section.id }} .sf-card--orange a { background: #FF7A1A; }
+  #apv-{{ section.id }} .sf-card--purple { background: #F1EDFD; border: 1px solid #E0D8FA; }
+  #apv-{{ section.id }} .sf-card--purple a { background: #8B5CF6; }
+
+  @media (max-width: 600px) {
+    #apv-{{ section.id }} dialog.apv-sf {
+      width: 100%; max-width: 100%; max-height: 92vh; margin: auto 0 0; border-radius: 20px 20px 0 0;
+    }
+    #apv-{{ section.id }} .sf-head { padding: 20px 60px 14px 18px; }
+    #apv-{{ section.id }} .sf-head h3 { font-size: 22px; }
+    #apv-{{ section.id }} .sf-close { top: 16px; right: 16px; }
+    #apv-{{ section.id }} .sf-body { padding: 18px 18px 20px; }
+    #apv-{{ section.id }} .sf-steps { gap: 8px; }
+    #apv-{{ section.id }} .sf-step { padding: 18px 8px 10px; }
+    #apv-{{ section.id }} .sf-step p { font-size: 11.5px; }
+    #apv-{{ section.id }} .sf-row { grid-template-columns: 42px 0.8fr 1.4fr auto; gap: 8px; padding: 12px 10px; }
+    #apv-{{ section.id }} .sf-foot { padding: 12px 14px 16px; gap: 10px; }
+    #apv-{{ section.id }} .sf-card p { font-size: 12px; }
+    #apv-{{ section.id }} .sf-card a { font-size: 12px; }
+  }
+  /* ---------- Responsive ---------- */
+  @media (max-width: 989px) {
+    #apv-{{ section.id }} .apv-wrap { grid-template-columns: 1fr; gap: 24px; }
+    #apv-{{ section.id }} .apv-left { position: static; }
+  }
+  @media (max-width: 749px) {
+    #apv-{{ section.id }} { padding: 12px 16px 40px; }
+    #apv-{{ section.id }} .apv-gallery { grid-template-columns: 1fr; }
+    #apv-{{ section.id }} .apv-thumbs { order: 2; flex-direction: row; overflow-x: auto; max-height: none; }
+    #apv-{{ section.id }} .apv-thumb { width: 56px; }
+    #apv-{{ section.id }} .apv-sizes { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; }
+    #apv-{{ section.id }} .apv-emi { width: 100%; }
+    #apv-{{ section.id }} .apv-box { flex-wrap: wrap; }
+    #apv-{{ section.id }} .apv-box .apv-box-btn { margin-left: 48px; }
+  }
+</style>
+
+{%- capture star -%}<path d="M12 2.3l2.95 6 6.6.95-4.78 4.65 1.13 6.57L12 17.36l-5.9 3.1 1.13-6.57L2.45 9.25l6.6-.95z"/>{%- endcapture -%}
+{%- capture ic_shield -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>{%- endcapture -%}
+{%- capture ic_video -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3"/></svg>{%- endcapture -%}
+{%- capture ic_steth -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a4 4 0 008 0V3"/><path d="M10 13v2a5 5 0 0010 0v-2"/><circle cx="20" cy="11" r="2"/></svg>{%- endcapture -%}
+{%- capture ic_check -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{%- endcapture -%}
+
+<section id="apv-{{ section.id }}" data-section="{{ section.id }}">
+  <div class="apv-wrap">
+
+    <!-- ===== Gallery ===== -->
+    <div class="apv-left">
+      <div class="apv-gallery">
+        <div class="apv-thumbs" role="tablist">
+          {%- for media in product.media -%}
+            <button type="button" class="apv-thumb{% if media.id == featured_media.id %} is-active{% endif %}" data-media-id="{{ media.id }}" aria-label="Show image {{ forloop.index }}">
+              {{ media.preview_image | image_url: width: 160 | image_tag: loading: 'lazy', alt: '' }}
+            </button>
+          {%- endfor -%}
+        </div>
+        <div class="apv-main">
+          {%- for media in product.media -%}
+            <div class="apv-slide{% if media.id == featured_media.id %} is-active{% endif %}" data-media-id="{{ media.id }}">
+              {%- case media.media_type -%}
+                {%- when 'image' -%}
+                  {{ media | image_url: width: 1400 | image_tag: widths: '500, 800, 1100, 1400', sizes: '(min-width: 990px) 45vw, 100vw', loading: forloop.first | ternary: 'eager', 'lazy' }}
+                {%- when 'video' -%}
+                  {{ media | video_tag: controls: true, muted: true, playsinline: true, loop: true, image_size: '1100x' }}
+                {%- when 'external_video' -%}
+                  {{ media | external_video_tag }}
+                {%- else -%}
+                  {{ media.preview_image | image_url: width: 1400 | image_tag: loading: 'lazy' }}
+              {%- endcase -%}
+            </div>
+          {%- else -%}
+            <div class="apv-slide is-active">{{ 'product-1' | placeholder_svg_tag }}</div>
+          {%- endfor -%}
+        </div>
+      </div>
+
+      {%- if section.settings.gallery_note != blank -%}
+        <div class="apv-note">
+          <span class="apv-ic" style="background:#1E9E4A;">{{ ic_steth }}</span>
+          <div>{{ section.settings.gallery_note }}</div>
+        </div>
+      {%- endif -%}
+    </div>
+
+    <!-- ===== Info ===== -->
+    <div class="apv-right">
+      {%- form 'product', product, id: 'apv-form-{{ section.id }}', novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
+        <input type="hidden" name="id" value="{{ current_variant.id }}" data-apv-id>
+
+        {%- for block in section.blocks -%}
+          {%- case block.type -%}
+
+            {%- when '@app' -%}
+              <div class="apv-block">{% render block %}</div>
+
+            {%- when 'rating' -%}
+              {%- liquid
+                assign r = product.metafields.reviews.rating.value.rating
+                assign rc = product.metafields.reviews.rating_count.value
+                if r == blank
+                  assign r = block.settings.rating_x10 | divided_by: 10.0
+                  assign rc = block.settings.count
+                endif
+                assign r10 = r | times: 10 | round
+              -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                <a class="apv-rating" href="{{ block.settings.link | default: '#reviews' }}">
+                  <span class="apv-stars" aria-label="{{ r }} out of 5">
+                    {%- for i in (0..4) -%}
+                      {%- assign f = i | times: 10 -%}{%- assign f = r10 | minus: f -%}
+                      {%- if f > 10 %}{% assign f = 10 %}{% endif -%}{%- if f < 0 %}{% assign f = 0 %}{% endif -%}
+                      <span class="apv-star"><svg viewBox="0 0 24 24" class="e">{{ star }}</svg><span class="f" style="width:{{ f | times: 10 }}%"><svg viewBox="0 0 24 24">{{ star }}</svg></span></span>
+                    {%- endfor -%}
+                  </span>
+                  <u>{{ r | round: 1 }}</u>
+                  <span class="c">[ {{ rc }} reviews ]</span>
+                </a>
+              </div>
+
+            {%- when 'title' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                {%- if block.settings.eyebrow != blank -%}<p class="apv-eyebrow">{{ block.settings.eyebrow }}</p>{%- endif -%}
+                <h2 class="apv-title">{{ product.title }}</h2>
+                {%- if block.settings.tagline != blank -%}
+                  <p class="apv-tagline">{{ block.settings.tagline | escape | replace: '[', '<span class="hl">' | replace: ']', '</span>' }}</p>
+                {%- endif -%}
+              </div>
+
+            {%- when 'price' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                <div class="apv-price-row">
+                  <div>
+                    <div class="apv-price-line">
+                      <span class="apv-price" data-apv-price>{{ current_variant.price | money_without_trailing_zeros }}</span>
+                      <s class="apv-compare" data-apv-compare {% unless current_variant.compare_at_price > current_variant.price %}hidden{% endunless %}>{{ current_variant.compare_at_price | money_without_trailing_zeros }}</s>
+                      <span class="apv-save" data-apv-save {% unless current_variant.compare_at_price > current_variant.price %}hidden{% endunless %}>Save {{ current_variant.compare_at_price | minus: current_variant.price | money_without_trailing_zeros }}</span>
+                    </div>
+                    {%- if block.settings.per_size_divisor != '0' -%}
+                      <div class="apv-persize" data-divisor="{{ block.settings.per_size_divisor }}">
+                        <b>≈ <span data-apv-persize>{{ current_variant.price | divided_by: block.settings.per_size_divisor | money_without_trailing_zeros }}</span> per size</b>
+                        <span>{{ block.settings.per_size_text }}</span>
+                      </div>
+                    {%- endif -%}
+                  </div>
+
+                  {%- if block.settings.show_emi -%}
+                    {%- assign emi_amt = current_variant.price | times: block.settings.emi_pct | divided_by: 100 -%}
+                    <div class="apv-emi" data-emi-pct="{{ block.settings.emi_pct }}">
+                      {%- if block.settings.emi_badge != blank -%}<span class="apv-emi-new">{{ block.settings.emi_badge }}</span>{%- endif -%}
+                      <p>or Pay <span class="amt" data-apv-emi>{{ emi_amt | money_without_trailing_zeros }}</span> now &amp; rest later at</p>
+                      <p><b>{{ block.settings.emi_line2 }}</b></p>
+                      <div class="apv-emi-row">
+                        {%- if block.settings.emi_btn_label != blank -%}
+                          <a class="apv-emi-btn" href="{{ block.settings.emi_link | default: '#' }}">{{ block.settings.emi_btn_label }}</a>
+                        {%- endif -%}
+                        {%- if block.settings.emi_logo != blank -%}
+                          <span>BY</span>{{ block.settings.emi_logo | image_url: height: 30 | image_tag: alt: 'EMI partner' }}
+                        {%- endif -%}
+                      </div>
+                    </div>
+                  {%- endif -%}
+                </div>
+              </div>
+
+            {%- when 'divider' -%}
+              <hr class="apv-divider" {{ block.shopify_attributes }}>
+
+            {%- when 'features' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                {%- if block.settings.title != blank -%}<p class="apv-h">{{ block.settings.title }}</p>{%- endif -%}
+                <div class="apv-feats">
+                  {%- for n in (1..6) -%}
+                    {%- assign ik = 'icon_' | append: n -%}{%- assign lk = 'label_' | append: n -%}
+                    {%- if block.settings[ik] != blank or block.settings[lk] != blank -%}
+                      <div class="apv-feat">
+                        {%- if block.settings[ik] != blank -%}{{ block.settings[ik] | image_url: height: 120 | image_tag: loading: 'lazy', alt: '' }}{%- endif -%}
+                        <span>{{ block.settings[lk] }}</span>
+                      </div>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </div>
+              </div>
+
+            {%- when 'variant_picker' -%}
+              <div class="apv-block" {{ block.shopify_attributes }} data-apv-picker>
+                {%- unless product.has_only_default_variant -%}
+                  {%- for option in product.options_with_values -%}
+                    {%- assign opt_key = 'option' | append: option.position -%}
+                    {%- if option.position == color_pos -%}
+                      <fieldset class="apv-opt" data-pos="{{ option.position }}">
+                        <div class="apv-opt-head"><legend class="apv-h">{{ option.name }}: <span data-apv-label="{{ option.position }}">{{ option.selected_value }}</span></legend></div>
+                        <div class="apv-swatches">
+                          {%- for value in option.values -%}
+                            {%- assign vname = value.name | default: value -%}
+                            {%- assign sw = nil -%}
+                            {%- for v in product.variants -%}
+                              {%- if v[opt_key] == vname and v.featured_image -%}{%- assign sw = v.featured_image -%}{%- break -%}{%- endif -%}
+                            {%- endfor -%}
+                            <label>
+                              <input type="radio" name="apv-opt-{{ section.id }}-{{ option.position }}" value="{{ vname | escape }}" {% if option.selected_value == vname %}checked{% endif %}>
+                              <span class="apv-swatch" title="{{ vname | escape }}">
+                                {%- if sw -%}
+                                  {{ sw | image_url: width: 120 | image_tag: loading: 'lazy', alt: vname }}
+                                {%- elsif value.swatch.image -%}
+                                  {{ value.swatch.image | image_url: width: 120 | image_tag: loading: 'lazy', alt: vname }}
+                                {%- elsif value.swatch.color -%}
+                                  <span style="width:100%;height:100%;background:{{ value.swatch.color }};"></span>
+                                {%- else -%}
+                                  {{ vname }}
+                                {%- endif -%}
+                              </span>
+                            </label>
+                          {%- endfor -%}
+                        </div>
+                      </fieldset>
+                    {%- else -%}
+                      <fieldset class="apv-opt" data-pos="{{ option.position }}">
+                        <div class="apv-opt-head">
+                          <legend class="apv-h">{% if option.position == size_pos and block.settings.size_label != blank %}{{ block.settings.size_label }}{% else %}{{ option.name }}:{% endif %}</legend>
+                            {%- if option.position == size_pos and block.settings.show_finder -%}
+                            <button type="button" class="apv-fms" data-apv-open="apv-sf-{{ section.id }}">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg>
+                              <span>{{ block.settings.size_btn }}</span>
+                            </button>
+                          {%- endif -%}
+                        </div>
+                        <div class="apv-sizes">
+                          {%- for value in option.values -%}
+                            {%- assign vname = value.name | default: value -%}
+                            {%- assign parts = vname | split: ' (' -%}
+                            <label>
+                              <input type="radio" name="apv-opt-{{ section.id }}-{{ option.position }}" value="{{ vname | escape }}" {% if option.selected_value == vname %}checked{% endif %}>
+                              <span class="apv-size">
+                                <span class="apv-low" hidden>{{ block.settings.low_label }}</span>
+                                <b>{{ parts[0] }}</b>
+                                {%- if parts[1] -%}<small>{{ parts[1] | remove: ')' }}</small>{%- endif -%}
+                              </span>
+                            </label>
+                          {%- endfor -%}
+                        </div>
+                      </fieldset>
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- endunless -%}
+                <p class="apv-stock" data-apv-stock hidden></p>
+              </div>
+
+                           {%- if block.settings.show_finder -%}
+                <dialog id="apv-sf-{{ section.id }}" class="apv-sf" aria-labelledby="apv-sf-title-{{ section.id }}">
+                  <div class="sf-head">
+                    <h3 id="apv-sf-title-{{ section.id }}">{{ block.settings.sf_title }}</h3>
+                    {%- if block.settings.sf_sub != blank -%}<p>{{ block.settings.sf_sub }}</p>{%- endif -%}
+                    <button type="button" class="sf-close" data-apv-close aria-label="Close">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    </button>
+                  </div>
+
+                  <div class="sf-body">
+                    <div class="sf-steps">
+                      <div class="sf-step">
+                        <span class="sf-tag">Step - 1</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="1.5"/><path d="M11 8.5c1.6 0 2.2 1.4 2.2 3.2 0 1.8-.6 3.3-1.8 3.3s-1.6-1.3-1.6-3.2c0-1.9.2-3.3 1.2-3.3z"/></svg>
+                        <p>{{ block.settings.step_1 }}</p>
+                      </div>
+                      <div class="sf-step">
+                        <span class="sf-tag">Step - 2</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5l4 4L8 20H4v-4z"/><path d="M14 6l4 4"/></svg>
+                        <p>{{ block.settings.step_2 }}</p>
+                      </div>
+                      <div class="sf-step">
+                        <span class="sf-tag">Step - 3</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15.5L15.5 3l5.5 5.5L8.5 21z"/><path d="M7 11.5l2 2M10 8.5l2 2M13 5.5l2 2"/></svg>
+                        <p>{{ block.settings.step_3 }}</p>
+                      </div>
+                    </div>
+
+                    {%- if block.settings.sf_tip != blank -%}
+                      <div class="sf-tip">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+                        <div>{{ block.settings.sf_tip }}</div>
+                      </div>
+                    {%- endif -%}
+
+                    <div class="sf-search">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                      <input type="number" inputmode="decimal" step="0.1" min="5" max="35" placeholder="{{ block.settings.sf_placeholder }}" aria-label="Foot length in cm" data-sf-input>
+                      <button type="button" data-sf-find>{{ block.settings.sf_find_btn }}</button>
+                    </div>
+                    <div class="sf-result" data-sf-result aria-live="polite" hidden></div>
+
+                    {%- if block.settings.sf_info != blank -%}
+                      <div class="sf-info">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+                        <div>{{ block.settings.sf_info }}</div>
+                      </div>
+                    {%- endif -%}
+
+                    <div class="sf-table">
+                      {%- assign sf_lines = block.settings.size_chart | newline_to_br | split: '<br />' -%}
+                      {%- for line in sf_lines -%}
+                        {%- assign c = line | strip | split: '|' -%}
+                        {%- if c.size >= 4 -%}
+                          {%- assign code = c[0] | strip -%}
+                          {%- assign age = c[1] | strip -%}
+                          {%- assign cmin = c[2] | strip -%}
+                          {%- assign cmax = c[3] | strip -%}
+                          <button type="button" class="sf-row" data-code="{{ code | escape }}" data-age="{{ age | escape }}" data-min="{{ cmin }}" data-max="{{ cmax }}">
+                            <span class="sf-code">{{ code }}</span>
+                            <span class="sf-age"><b>{{ age }}</b><small>Years</small></span>
+                            <span class="sf-cm"><b>{{ cmin }} - {{ cmax }} cm</b><small>foot length it covers</small></span>
+                            <span class="sf-intl">{% if c[4] %}{{ c[4] | strip }}{% endif %}{% if c[5] %}<br>{{ c[5] | strip }}{% endif %}</span>
+                          </button>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </div>
+                  </div>
+
+                  <div class="sf-foot">
+                    {%- if block.settings.sf_video_btn != blank -%}
+                      <div class="sf-card sf-card--orange">
+                        <p>{{ block.settings.sf_video_title }}</p>
+                        <a href="{{ block.settings.sf_video_link | default: '#' }}" target="_blank" rel="noopener">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3"/></svg>
+                          {{ block.settings.sf_video_btn }}
+                        </a>
+                      </div>
+                    {%- endif -%}
+                    {%- if block.settings.sf_store_btn != blank -%}
+                      <div class="sf-card sf-card--purple">
+                        <p>{{ block.settings.sf_store_title }}</p>
+                        <a href="{{ block.settings.sf_store_link | default: '#' }}">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9v11h16V9"/><path d="M4 9c0 1.7 1.3 3 3 3s2.7-1.3 2.7-3c0 1.7 1.2 3 2.3 3s2.3-1.3 2.3-3c0 1.7 1 3 2.7 3s3-1.3 3-3"/></svg>
+                          {{ block.settings.sf_store_btn }}
+                        </a>
+                      </div>
+                    {%- endif -%}
+                  </div>
+                </dialog>
+              {%- endif -%}
+
+            {%- when 'info_box' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                <div class="apv-box apv-box--{{ block.settings.style }}">
+                  <span class="apv-ic">
+                    {%- if block.settings.icon_image != blank -%}
+                      {{ block.settings.icon_image | image_url: width: 60 | image_tag: alt: '', style: 'width:18px;height:18px;object-fit:contain' }}
+                    {%- else -%}
+                      {%- case block.settings.icon -%}
+                        {%- when 'video' -%}{{ ic_video }}
+                        {%- when 'steth' -%}{{ ic_steth }}
+                        {%- when 'check' -%}{{ ic_check }}
+                        {%- else -%}{{ ic_shield }}
+                      {%- endcase -%}
+                    {%- endif -%}
+                  </span>
+                  <div class="t">
+                    {%- if block.settings.heading != blank -%}<h4>{{ block.settings.heading }}</h4>{%- endif -%}
+                    {{ block.settings.text }}
+                  </div>
+                  {%- if block.settings.btn_label != blank -%}
+                    <a class="apv-box-btn" href="{{ block.settings.btn_link | default: '#' }}" {% if block.settings.new_tab %}target="_blank" rel="noopener"{% endif %}>{{ block.settings.btn_label }}</a>
+                  {%- endif -%}
+                </div>
+              </div>
+
+            {%- when 'combos' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                <div class="apv-combos" data-apv-combos>
+                  <div class="apv-combos-head">
+                    <p class="apv-h">{{ block.settings.title }}</p>
+                    {%- if block.settings.badge != blank -%}<span class="apv-best">{{ block.settings.badge }}</span>{%- endif -%}
+                  </div>
+                  {%- for n in (1..3) -%}
+                    {%- assign nk = 'name_' | append: n -%}
+                    {%- assign qk = 'qty_' | append: n -%}
+                    {%- assign ok = 'off_' | append: n -%}
+                    {%- if block.settings[nk] != blank -%}
+                      {%- liquid
+                        assign q = block.settings[qk]
+                        assign off_c = block.settings[ok] | times: 100
+                        assign base = current_variant.price | times: q
+                        assign final = base | minus: off_c
+                        assign cmp = compare_base | times: q
+                        assign saved = cmp | minus: final
+                      -%}
+                      <label class="apv-combo" data-qty="{{ q }}" data-off="{{ off_c }}">
+                        <span class="off" data-c-off {% if saved <= 0 %}hidden{% endif %}>{{ saved | money_without_trailing_zeros }} OFF</span>
+                        <input type="radio" name="apv-combo-{{ section.id }}" value="{{ q }}" {% if n == 1 %}checked{% endif %}>
+                        <span class="info">
+                          <span class="nm">{{ block.settings[nk] }}</span>
+                          <span class="pr">{{ q }} {% if q == 1 %}pair{% else %}pairs{% endif %} · <s data-c-cmp {% if saved <= 0 %}hidden{% endif %}>{{ cmp | money_without_trailing_zeros }}</s> <em data-c-price>{{ final | money_without_trailing_zeros }}</em></span>
+                        </span>
+                        <span class="pics" data-c-pics>
+                          {%- for i in (1..q) -%}
+                            {%- if current_variant.featured_image -%}{{ current_variant.featured_image | image_url: width: 60 | image_tag: alt: '' }}{%- endif -%}
+                          {%- endfor -%}
+                        </span>
+                      </label>
+                    {%- endif -%}
+                  {%- endfor -%}
+                  {%- if block.settings.footer != blank -%}<p class="apv-combos-foot">{{ block.settings.footer }}</p>{%- endif -%}
+                </div>
+              </div>
+
+            {%- when 'buy_buttons' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                <div class="apv-buy">
+                  <div class="apv-qty">
+                    <button type="button" data-apv-qty="-1" aria-label="Decrease quantity">&minus;</button>
+                    <input type="number" name="quantity" value="1" min="1" max="99" data-apv-qty-input aria-label="Quantity">
+                    <button type="button" data-apv-qty="1" aria-label="Increase quantity">+</button>
+                  </div>
+                  <button type="submit" class="apv-atc" data-apv-atc {% unless current_variant.available %}disabled{% endunless %}>
+                    {%- if current_variant.available -%}{{ block.settings.atc_label }}{%- else -%}{{ block.settings.soldout_label }}{%- endif -%}
+                  </button>
+                </div>
+                <p class="apv-err" data-apv-err role="alert"></p>
+                {%- if block.settings.show_dynamic -%}<div style="margin-top:10px;">{{ form | payment_button }}</div>{%- endif -%}
+              </div>
+
+            {%- when 'pincode' -%}
+              <div class="apv-block" {{ block.shopify_attributes }} data-apv-pinwrap
+                data-days="{{ block.settings.days | escape }}"
+                data-fast="{{ block.settings.fast_prefixes | escape }}"
+                data-fast-days="{{ block.settings.fast_days | escape }}"
+                data-extra="{{ block.settings.extra | escape }}">
+                <div class="apv-pin">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+                  <input type="text" inputmode="numeric" maxlength="6" placeholder="{{ block.settings.placeholder }}" aria-label="Pincode" data-apv-pin>
+                  <button type="button" data-apv-pin-btn>Check</button>
+                </div>
+                <p class="apv-pin-msg" data-apv-pin-msg aria-live="polite"></p>
+              </div>
+
+            {%- when 'trust' -%}
+              <div class="apv-block" {{ block.shopify_attributes }}>
+                <div class="apv-trust">
+                  {%- for n in (1..3) -%}
+                    {%- assign ik = 'icon_' | append: n -%}{%- assign lk = 'label_' | append: n -%}
+                    {%- if block.settings[lk] != blank -%}
+                      <div>
+                        {%- if block.settings[ik] != blank -%}{{ block.settings[ik] | image_url: height: 80 | image_tag: loading: 'lazy', alt: '' }}{%- endif -%}
+                        {{ block.settings[lk] | newline_to_br }}
+                      </div>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </div>
+              </div>
+
+            {%- when 'accordion' -%}
+              <div class="apv-block is-acc" {{ block.shopify_attributes }}>
+                <details class="apv-acc" {% if block.settings.open %}open{% endif %}>
+                  <summary>{{ block.settings.title }}<i aria-hidden="true"></i></summary>
+                  <div class="c rte">
+                    {%- if block.settings.use_description -%}{{ product.description }}{%- endif -%}
+                    {{ block.settings.content }}
+                    {%- if block.settings.page != blank -%}{{ block.settings.page.content }}{%- endif -%}
+                  </div>
+                </details>
+              </div>
+
+          {%- endcase -%}
+        {%- endfor -%}
+      {%- endform -%}
+    </div>
+  </div>
+
+  <script type="application/json" data-apv-variants>{{ product.variants | json }}</script>
+  <script type="application/json" data-apv-stockmap>
+    {
+    {%- for v in product.variants -%}
+      "{{ v.id }}": {% if v.inventory_management == 'shopify' and v.inventory_quantity > 0 and v.inventory_quantity <= section.settings.low_stock %}{{ v.inventory_quantity }}{% else %}null{% endif %}{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+    }
+  </script>
+</section>
+
+<script>
+(function () {
+  var root = document.getElementById('apv-{{ section.id }}');
+  if (!root || root.dataset.ready) return;
+  root.dataset.ready = '1';
+
+  var SYM = {{ cart.currency.symbol | json }};
+  var COLOR_POS = {{ color_pos }}, SIZE_POS = {{ size_pos }};
+  var variants = JSON.parse(root.querySelector('[data-apv-variants]').textContent);
+  var stock = JSON.parse(root.querySelector('[data-apv-stockmap]').textContent);
+  var form = root.querySelector('form[data-type="add-to-cart-form"]');
+  var idInput = root.querySelector('[data-apv-id]');
+  var fieldsets = Array.prototype.slice.call(root.querySelectorAll('.apv-opt'));
+  var atc = root.querySelector('[data-apv-atc]');
+  var atcLabel = {{ section.blocks | where: 'type', 'buy_buttons' | map: 'settings' | map: 'atc_label' | first | default: 'Add to cart' | json }};
+  var soldLabel = {{ section.blocks | where: 'type', 'buy_buttons' | map: 'settings' | map: 'soldout_label' | first | default: 'Sold out' | json }};
+
+  function fmt(c) { return SYM + Math.round(c / 100).toLocaleString('en-IN'); }
+  function $(s) { return root.querySelector(s); }
+  function shortSize(v) { var m = /\(([^)]+)\)/.exec(v); return m ? m[1] : v; }
+
+  function selected() {
+    return fieldsets.map(function (fs) { var c = fs.querySelector('input:checked'); return c ? c.value : null; });
+  }
+  function posOf(fs) { return parseInt(fs.dataset.pos, 10); }
+  function find(opts) {
+    return variants.find(function (v) { return opts.every(function (o, i) { return o === null || v.options[i] === o; }); });
+  }
+
+  /* ---------- Gallery ---------- */
+  var slides = Array.prototype.slice.call(root.querySelectorAll('.apv-slide'));
+  var thumbs = Array.prototype.slice.call(root.querySelectorAll('.apv-thumb'));
+  function showMedia(id) {
+    if (!id) return;
+    slides.forEach(function (s) {
+      var on = s.dataset.mediaId == id;
+      s.classList.toggle('is-active', on);
+      var vid = s.querySelector('video'); if (vid && !on) vid.pause();
+    });
+    thumbs.forEach(function (t) {
+      var on = t.dataset.mediaId == id;
+      t.classList.toggle('is-active', on);
+      if (on) t.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+  thumbs.forEach(function (t) { t.addEventListener('click', function () { showMedia(t.dataset.mediaId); }); });
+  var main = $('.apv-main'), sx = null;
+  if (main) {
+    main.addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; }, { passive: true });
+    main.addEventListener('touchend', function (e) {
+      if (sx === null) return;
+      var dx = e.changedTouches[0].clientX - sx; sx = null;
+      if (Math.abs(dx) < 40) return;
+      var i = slides.findIndex(function (s) { return s.classList.contains('is-active'); });
+      var n = dx < 0 ? Math.min(i + 1, slides.length - 1) : Math.max(i - 1, 0);
+      showMedia(slides[n].dataset.mediaId);
+    });
+  }
+
+  /* ---------- Variant update ---------- */
+  function updateAvailability(sel) {
+    fieldsets.forEach(function (fs) {
+      var idx = posOf(fs) - 1;
+      fs.querySelectorAll('input').forEach(function (inp) {
+        var test = sel.slice(); test[idx] = inp.value;
+        var v = find(test);
+        var box = inp.nextElementSibling;
+        box.classList.toggle('is-oos', !v || !v.available);
+        var low = box.querySelector('.apv-low');
+        if (low) low.hidden = !(v && v.available && stock[v.id]);
+      });
+    });
+  }
+
+  function updateStockNote(variant, sel) {
+    var note = $('[data-apv-stock]'); if (!note) return;
+    var target = (variant && stock[variant.id]) ? variant : null;
+    if (!target && COLOR_POS) {
+      target = variants.find(function (v) { return v.available && stock[v.id] && v.options[COLOR_POS - 1] === sel[COLOR_POS - 1]; });
+    }
+    if (!target) { note.hidden = true; return; }
+    var sizeName = SIZE_POS ? shortSize(target.options[SIZE_POS - 1]) : target.title;
+    var colorName = COLOR_POS ? target.options[COLOR_POS - 1] : '';
+    note.innerHTML = '<span><b>' + sizeName + '</b> is selling fast — <b>only ' + stock[target.id] + '</b> left' + (colorName ? ' in ' + colorName : '') + '</span>';
+    note.hidden = false;
+  }
+
+  function updatePrices(v) {
+    var p = $('[data-apv-price]'); if (p) p.textContent = fmt(v.price);
+    var hasCmp = v.compare_at_price && v.compare_at_price > v.price;
+    var c = $('[data-apv-compare]'); if (c) { c.hidden = !hasCmp; if (hasCmp) c.textContent = fmt(v.compare_at_price); }
+    var s = $('[data-apv-save]'); if (s) { s.hidden = !hasCmp; if (hasCmp) s.textContent = 'Save ' + fmt(v.compare_at_price - v.price); }
+    var ps = $('[data-apv-persize]'); if (ps) ps.textContent = fmt(v.price / parseInt(ps.closest('.apv-persize').dataset.divisor, 10));
+    var emi = $('[data-apv-emi]'); if (emi) emi.textContent = fmt(v.price * parseInt(emi.closest('.apv-emi').dataset.emiPct, 10) / 100);
+
+    var cmpBase = hasCmp ? v.compare_at_price : v.price;
+    var img = v.featured_image ? v.featured_image.src : null;
+    root.querySelectorAll('.apv-combo').forEach(function (row) {
+      var q = parseInt(row.dataset.qty, 10), off = parseInt(row.dataset.off, 10);
+      var final = v.price * q - off, cmp = cmpBase * q, saved = cmp - final;
+      row.querySelector('[data-c-price]').textContent = fmt(final);
+      var cs = row.querySelector('[data-c-cmp]'); cs.hidden = saved <= 0; cs.textContent = fmt(cmp);
+      var ot = row.querySelector('[data-c-off]'); ot.hidden = saved <= 0; ot.textContent = fmt(saved) + ' OFF';
+      if (img) row.querySelector('[data-c-pics]').innerHTML = new Array(q + 1).join('<img src="' + img + (img.indexOf('?') > -1 ? '&' : '?') + 'width=60" alt="">');
+    });
+  }
+
+  function onChange(changedPos) {
+    var sel = selected();
+    var v = find(sel);
+    if (!v || !v.available) {
+      var keep = changedPos ? sel[changedPos - 1] : null;
+      var alt = variants.find(function (x) { return x.available && (!keep || x.options[changedPos - 1] === keep); });
+      if (alt && !v) {
+        v = alt;
+        fieldsets.forEach(function (fs) {
+          var val = v.options[posOf(fs) - 1];
+          fs.querySelectorAll('input').forEach(function (i) { i.checked = i.value === val; });
+        });
+        sel = selected();
+      }
+    }
+    fieldsets.forEach(function (fs) {
+      var lab = root.querySelector('[data-apv-label="' + fs.dataset.pos + '"]');
+      if (lab) lab.textContent = sel[posOf(fs) - 1];
+    });
+    updateAvailability(sel);
+    updateStockNote(v, sel);
+    if (!v) { if (atc) { atc.disabled = true; atc.textContent = 'Unavailable'; } return; }
+
+    idInput.value = v.id;
+    updatePrices(v);
+    if (v.featured_media) showMedia(v.featured_media.id);
+    if (atc) { atc.disabled = !v.available; atc.textContent = v.available ? atcLabel : soldLabel; }
+  }
+
+  fieldsets.forEach(function (fs) {
+    fs.addEventListener('change', function () { onChange(posOf(fs)); });
+  });
+
+  /* ---------- Quantity & combos ---------- */
+  var qtyInput = $('[data-apv-qty-input]');
+  root.querySelectorAll('[data-apv-qty]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var n = Math.max(1, Math.min(99, (parseInt(qtyInput.value, 10) || 1) + parseInt(b.dataset.apvQty, 10)));
+      qtyInput.value = n;
+    });
+  });
+  function comboQty() {
+    var c = root.querySelector('.apv-combo input:checked');
+    return c ? parseInt(c.value, 10) : 1;
+  }
+
+  /* ---------- Add to cart ---------- */
+  if (form && atc) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var err = $('[data-apv-err]'); if (err) err.textContent = '';
+      atc.classList.add('is-loading');
+
+      var fd = new FormData(form);
+      fd.set('quantity', (parseInt(qtyInput ? qtyInput.value : 1, 10) || 1) * comboQty());
+      var cart = document.querySelector('cart-drawer') || document.querySelector('cart-notification');
+      if (cart && cart.getSectionsToRender) {
+        fd.append('sections', cart.getSectionsToRender().map(function (s) { return s.id; }));
+        fd.append('sections_url', window.location.pathname);
+        if (cart.setActiveElement) cart.setActiveElement(document.activeElement);
+      }
+
+      fetch((window.Shopify && Shopify.routes ? Shopify.routes.root : '/') + 'cart/add.js', {
+        method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: fd
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.status) { if (err) err.textContent = res.description || res.message || 'Could not add to cart.'; return; }
+        if (cart && cart.renderContents) {
+          cart.renderContents(res);
+          if (cart.classList.contains('is-empty')) cart.classList.remove('is-empty');
+        } else {
+          window.location.href = (window.Shopify && Shopify.routes ? Shopify.routes.root : '/') + 'cart';
+        }
+      })
+      .catch(function () { if (err) err.textContent = 'Something went wrong. Please try again.'; })
+      .finally(function () { atc.classList.remove('is-loading'); });
+    });
+  }
+
+  /* ---------- Pincode ---------- */
+  var pinWrap = $('[data-apv-pinwrap]');
+  if (pinWrap) {
+    var pin = pinWrap.querySelector('[data-apv-pin]'), msg = pinWrap.querySelector('[data-apv-pin-msg]');
+    var tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    function check() {
+      var v = (pin.value || '').trim();
+      if (!/^[1-9][0-9]{5}$/.test(v)) { msg.className = 'apv-pin-msg is-err'; msg.textContent = 'Please enter a valid 6-digit pincode.'; return; }
+      var days = pinWrap.dataset.days;
+      var fast = (pinWrap.dataset.fast || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      if (fast.some(function (p) { return v.indexOf(p) === 0; }) && pinWrap.dataset.fastDays) days = pinWrap.dataset.fastDays;
+      msg.className = 'apv-pin-msg';
+      msg.innerHTML = tick + '<span>Delivers to ' + v + ' in <b>' + days + '</b>' + (pinWrap.dataset.extra ? ' · ' + pinWrap.dataset.extra : '') + '</span>';
+      try { localStorage.setItem('apv_pin', v); } catch (e) {}
+    }
+    pin.addEventListener('input', function () { pin.value = pin.value.replace(/\D/g, '').slice(0, 6); });
+    pin.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); check(); } });
+    pinWrap.querySelector('[data-apv-pin-btn]').addEventListener('click', check);
+    try { var saved = localStorage.getItem('apv_pin'); if (saved) { pin.value = saved; check(); } } catch (e) {}
+  }
+
+  /* ---------- Size guide modal ---------- */
+  root.querySelectorAll('[data-apv-open]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var d = document.getElementById(b.dataset.apvOpen);
+      if (d && d.showModal) d.showModal();
+    });
+  });
+  root.querySelectorAll('dialog').forEach(function (d) {
+    d.addEventListener('click', function (e) { if (e.target === d || e.target.hasAttribute('data-apv-close')) d.close(); });
+  });
+  /* ---------- Size finder ---------- */
+  var sf = root.querySelector('dialog.apv-sf');
+  if (sf) {
+    var sfInput = sf.querySelector('[data-sf-input]');
+    var sfResult = sf.querySelector('[data-sf-result]');
+    var sfRows = Array.prototype.slice.call(sf.querySelectorAll('.sf-row'));
+    var okIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+    function sizeFieldset() {
+      return fieldsets.find(function (fs) { return posOf(fs) === SIZE_POS; });
+    }
+    function inputForCode(code) {
+      var fs = sizeFieldset(); if (!fs) return null;
+      var c = code.toLowerCase();
+      return Array.prototype.slice.call(fs.querySelectorAll('input')).find(function (i) {
+        var v = i.value.toLowerCase();
+        return v.indexOf('(' + c + ')') > -1 || v === c;
+      });
+    }
+    function markCurrent() {
+      var fs = sizeFieldset(); var cur = fs ? fs.querySelector('input:checked') : null;
+      sfRows.forEach(function (r) {
+        var inp = inputForCode(r.dataset.code);
+        r.classList.toggle('is-current', !!(cur && inp === cur));
+      });
+    }
+    function selectCode(code) {
+      var inp = inputForCode(code);
+      if (inp) {
+        inp.checked = true;
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      sf.close();
+    }
+    function find() {
+      var cm = parseFloat(String(sfInput.value).replace(',', '.'));
+      sfRows.forEach(function (r) { r.classList.remove('is-match'); });
+      sfResult.classList.remove('is-err');
+      if (!cm || cm < 5 || cm > 35) {
+        sfResult.classList.add('is-err');
+        sfResult.innerHTML = '<div class="msg">Please enter your child\'s foot length in cm (e.g. 15.5).</div>';
+        sfResult.hidden = false; return;
+      }
+      var match = sfRows.find(function (r) { return cm >= parseFloat(r.dataset.min) && cm <= parseFloat(r.dataset.max); })
+               || sfRows.find(function (r) { return cm < parseFloat(r.dataset.min); });
+      if (!match) {
+        var last = sfRows[sfRows.length - 1];
+        sfResult.classList.add('is-err');
+        sfResult.innerHTML = '<div class="msg">' + cm + ' cm is above our largest size' + (last ? ' (' + last.dataset.code + ')' : '') + '. Book a video call and we\'ll help you choose.</div>';
+        sfResult.hidden = false; return;
+      }
+      var code = match.dataset.code;
+      sfResult.innerHTML =
+        '<div class="msg">' + okIcon + '<span>Foot length <b>' + cm + ' cm</b> &rarr; <b>Size ' + code + '</b> (' + match.dataset.age + ' yr). Fits now and keeps expanding to <b>' + match.dataset.max + ' cm.</b></span></div>' +
+        '<button type="button" class="sf-pick" data-sf-pick="' + code + '">Select size ' + code + '</button>';
+      sfResult.hidden = false;
+      match.classList.add('is-match');
+      match.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    sf.querySelector('[data-sf-find]').addEventListener('click', find);
+    sfInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); } });
+    sfResult.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-sf-pick]'); if (b) selectCode(b.dataset.sfPick);
+    });
+    sfRows.forEach(function (r) { r.addEventListener('click', function () { selectCode(r.dataset.code); }); });
+
+    root.querySelectorAll('[data-apv-open="' + sf.id + '"]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        markCurrent();
+        document.documentElement.style.overflow = 'hidden';
+        setTimeout(function () { sfInput.focus({ preventScroll: true }); }, 50);
+      });
+    });
+    sf.addEventListener('close', function () { document.documentElement.style.overflow = ''; });
+  }
+  onChange(0);
+})();
+</script>
+{%- else -%}
+  {%- if request.design_mode -%}
+    <div style="padding:60px 20px;text-align:center;color:#666;font-size:15px;">
+      Select a product in this section's settings to display it here.
+    </div>
+  {%- endif -%}
+{%- endif -%}
+{% schema %}
+{
+  "name": "Aretto Product",
+  "tag": "div",
+  "class": "section-aretto-product",
+  "enabled_on": { "templates": ["index"] },
+  "settings": [
+    { "type": "header", "content": "Product" },
+    { "type": "product", "id": "product", "label": "Product" },
+    { "type": "header", "content": "Gallery" },
+    {
+      "type": "select", "id": "gallery_ratio", "label": "Main image shape",
+      "options": [
+        { "value": "4 / 5", "label": "Portrait (4:5)" },
+        { "value": "1 / 1", "label": "Square" },
+        { "value": "3 / 4", "label": "Portrait (3:4)" }
+      ],
+      "default": "4 / 5"
+    },
+    { "type": "checkbox", "id": "sticky_gallery", "label": "Sticky gallery on desktop", "default": true },
+    { "type": "richtext", "id": "gallery_note", "label": "Note under gallery", "default": "<p><strong>Pediatrician-approved design.</strong> Wide toe box + flexible sole for healthy foot development.</p>" },
+
+    { "type": "header", "content": "Stock" },
+    { "type": "range", "id": "low_stock", "label": "Show LOW badge at or below", "min": 1, "max": 20, "step": 1, "default": 5, "info": "Requires inventory tracking on the variant." },
+
+    { "type": "header", "content": "Fonts & colors" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Fonts", "default": true },
+    { "type": "text", "id": "heading_font", "label": "Heading font", "default": "Oswald" },
+    { "type": "text", "id": "body_font", "label": "Body font", "default": "Inter" },
+    { "type": "color", "id": "accent", "label": "Accent color", "default": "#2323F0" },
+    { "type": "range", "id": "title_size", "label": "Title max size", "min": 24, "max": 56, "step": 2, "unit": "px", "default": 38 },
+    { "type": "range", "id": "feature_icon_size", "label": "Feature icon height", "min": 24, "max": 60, "step": 2, "unit": "px", "default": 34 },
+
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "max_width", "label": "Content width", "min": 900, "max": 1600, "step": 20, "unit": "px", "default": 1100 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 100, "step": 4, "unit": "px", "default": 24 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 100, "step": 4, "unit": "px", "default": 48 }
+  ],
+  "blocks": [
+    { "type": "@app" },
+    {
+      "type": "rating", "name": "Rating", "limit": 1,
+      "settings": [
+        { "type": "paragraph", "content": "Uses your reviews app rating automatically (Judge.me, Loox, etc.). The values below are only used if no app rating exists." },
+        { "type": "range", "id": "rating_x10", "label": "Fallback rating (× 10)", "min": 10, "max": 50, "step": 1, "default": 47 },
+        { "type": "text", "id": "count", "label": "Fallback review count", "default": "530" },
+        { "type": "text", "id": "link", "label": "Link to reviews", "default": "#reviews" }
+      ]
+    },
+    {
+      "type": "title", "name": "Title", "limit": 1,
+      "settings": [
+        { "type": "text", "id": "eyebrow", "label": "Eyebrow", "default": "Kids' shoes that grow with them" },
+        { "type": "text", "id": "tagline", "label": "Tagline", "default": "One pair. [Three sizes.] Zero squeeze.", "info": "Wrap words in [ ] to highlight them in the accent color." }
+      ]
+    },
+    {
+      "type": "price", "name": "Price + EMI", "limit": 1,
+      "settings": [
+        {
+          "type": "select", "id": "per_size_divisor", "label": "Per-size chip",
+          "options": [ { "value": "0", "label": "Hide" }, { "value": "2", "label": "Price ÷ 2" }, { "value": "3", "label": "Price ÷ 3" } ],
+          "default": "3"
+        },
+        { "type": "text", "id": "per_size_text", "label": "Per-size text", "default": "- one pair replaces three" },
+        { "type": "checkbox", "id": "show_emi", "label": "Show EMI box", "default": true },
+        { "type": "range", "id": "emi_pct", "label": "Upfront amount (% of price)", "min": 5, "max": 50, "step": 1, "unit": "%", "default": 18 },
+        { "type": "text", "id": "emi_line2", "label": "EMI line 2", "default": "0% EMI on UPI via PAY LATER" },
+        { "type": "text", "id": "emi_badge", "label": "Corner badge", "default": "NEW" },
+        { "type": "text", "id": "emi_btn_label", "label": "Button label", "default": "Pay via EMI" },
+        { "type": "url", "id": "emi_link", "label": "Button link" },
+        { "type": "image_picker", "id": "emi_logo", "label": "EMI partner logo" }
+      ]
+    },
+    { "type": "divider", "name": "Divider", "settings": [] },
+    {
+      "type": "features", "name": "Feature icons",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Why kids and parents love them" },
+        { "type": "image_picker", "id": "icon_1", "label": "Icon 1" }, { "type": "text", "id": "label_1", "label": "Label 1", "default": "Enhanced Grip" },
+        { "type": "image_picker", "id": "icon_2", "label": "Icon 2" }, { "type": "text", "id": "label_2", "label": "Label 2", "default": "All Round Protection" },
+        { "type": "image_picker", "id": "icon_3", "label": "Icon 3" }, { "type": "text", "id": "label_3", "label": "Label 3", "default": "Natural Foot Shape" },
+        { "type": "image_picker", "id": "icon_4", "label": "Icon 4" }, { "type": "text", "id": "label_4", "label": "Label 4", "default": "Keeps feet cool & dry" },
+        { "type": "image_picker", "id": "icon_5", "label": "Icon 5" }, { "type": "text", "id": "label_5", "label": "Label 5", "default": "Feel the ground" },
+        { "type": "image_picker", "id": "icon_6", "label": "Icon 6" }, { "type": "text", "id": "label_6", "label": "Label 6", "default": "Boost Cognition" }
+      ]
+    },
+       {
+      "type": "variant_picker", "name": "Color & size picker", "limit": 1,
+      "settings": [
+        { "type": "paragraph", "content": "Name your options 'Color' and 'Size'. Write sizes like '1 - 2 y (S1)' — text in brackets shows as the small label." },
+        { "type": "text", "id": "size_label", "label": "Size heading", "default": "Select Aretto size:" },
+        { "type": "text", "id": "low_label", "label": "Low stock badge", "default": "LOW" },
+
+        { "type": "header", "content": "Find my size popup" },
+        { "type": "checkbox", "id": "show_finder", "label": "Show 'Find my size' button", "default": true },
+        { "type": "text", "id": "size_btn", "label": "Button label", "default": "Find my size" },
+        { "type": "text", "id": "sf_title", "label": "Popup title", "default": "Find your child's size" },
+        { "type": "text", "id": "sf_sub", "label": "Popup subtitle", "default": "Two easy ways — measure the foot, or just pick by age." },
+        { "type": "text", "id": "step_1", "label": "Step 1", "default": "Stand your child on a sheet of paper" },
+        { "type": "text", "id": "step_2", "label": "Step 2", "default": "Mark the heel and the longest toe" },
+        { "type": "text", "id": "step_3", "label": "Step 3", "default": "Measure the distance in cm" },
+        { "type": "richtext", "id": "sf_tip", "label": "Tip", "default": "<p><strong>Tip:</strong> measure in the evening (feet are largest) - we handle the growing room.</p>" },
+        { "type": "text", "id": "sf_placeholder", "label": "Input placeholder", "default": "Foot length in cm" },
+        { "type": "text", "id": "sf_find_btn", "label": "Find button", "default": "Find size" },
+        { "type": "richtext", "id": "sf_info", "label": "Info line", "default": "<p>Each size range <strong>expands fully within its range</strong>, so one pair lasts longer. Tap a row to select your size.</p>" },
+        {
+          "type": "textarea", "id": "size_chart", "label": "Size chart",
+          "default": "S1 | 1 - 2 | 11.5 | 13 | UK 3 - 4.5 | EU 19 - 21\nS2 | 2 - 3 | 13.5 | 15 | UK 5 - 7 | EU 22 - 24\nS3 | 3 - 4 | 15.5 | 17.5 | UK 7.5 - 10 | EU 25 - 27\nS4 | 4 - 6 | 18 | 19.5 | UK 10.5 - 12 | EU 28 - 30\nS5 | 6 - 8 | 20 | 21 | UK 12.5 - 13.5 | EU 31 - 32\nS6 | 8+ | 21.5 | 23 | UK 1 - 2.5 | EU 33 - 35",
+          "info": "One size per line: Code | Age | Min cm | Max cm | UK | EU. The code must match the bracket in your Size option, e.g. '1 - 2 y (S1)'."
+        },
+        { "type": "text", "id": "sf_video_title", "label": "Video card title", "default": "Not sure about the size ?" },
+        { "type": "text", "id": "sf_video_btn", "label": "Video button", "default": "Book a free video call" },
+        { "type": "url", "id": "sf_video_link", "label": "Video call link", "info": "e.g. Calendly or WhatsApp link" },
+        { "type": "text", "id": "sf_store_title", "label": "Store card title", "default": "Find your nearest store" },
+        { "type": "text", "id": "sf_store_btn", "label": "Store button", "default": "Find a store" },
+        { "type": "url", "id": "sf_store_link", "label": "Store locator link" }
+      ]
+    },
+    {
+      "type": "info_box", "name": "Info box",
+      "settings": [
+        {
+          "type": "select", "id": "style", "label": "Style",
+          "options": [ { "value": "green", "label": "Green" }, { "value": "orange", "label": "Orange" }, { "value": "purple", "label": "Purple" } ],
+          "default": "green"
+        },
+        {
+          "type": "select", "id": "icon", "label": "Icon",
+          "options": [ { "value": "shield", "label": "Shield" }, { "value": "video", "label": "Video" }, { "value": "steth", "label": "Stethoscope" }, { "value": "check", "label": "Check" } ],
+          "default": "shield"
+        },
+        { "type": "image_picker", "id": "icon_image", "label": "Custom icon (optional)" },
+        { "type": "text", "id": "heading", "label": "Heading" },
+        { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Wrong size? <strong>Free exchange + a size-check call before dispatch.</strong> Zero fit risk.</p>" },
+        { "type": "text", "id": "btn_label", "label": "Button label" },
+        { "type": "url", "id": "btn_link", "label": "Button link" },
+        { "type": "checkbox", "id": "new_tab", "label": "Open link in new tab", "default": true }
+      ]
+    },
+    {
+      "type": "combos", "name": "Combo offers", "limit": 1,
+      "settings": [
+        { "type": "paragraph", "content": "Prices shown here are for display. Create matching automatic discounts in Shopify (Discounts → Amount off products → minimum quantity) so the cart applies them." },
+        { "type": "text", "id": "title", "label": "Title", "default": "Save more with combos" },
+        { "type": "text", "id": "badge", "label": "Badge", "default": "Best value" },
+        { "type": "text", "id": "name_1", "label": "Combo 1 name", "default": "Single Pair" },
+        { "type": "range", "id": "qty_1", "label": "Combo 1 pairs", "min": 1, "max": 6, "step": 1, "default": 1 },
+        { "type": "range", "id": "off_1", "label": "Combo 1 extra discount (₹)", "min": 0, "max": 2000, "step": 25, "default": 0 },
+        { "type": "text", "id": "name_2", "label": "Combo 2 name", "default": "Sibling Bundle" },
+        { "type": "range", "id": "qty_2", "label": "Combo 2 pairs", "min": 1, "max": 6, "step": 1, "default": 2 },
+        { "type": "range", "id": "off_2", "label": "Combo 2 extra discount (₹)", "min": 0, "max": 2000, "step": 25, "default": 500 },
+        { "type": "text", "id": "name_3", "label": "Combo 3 name", "default": "Growing Family Bundle" },
+        { "type": "range", "id": "qty_3", "label": "Combo 3 pairs", "min": 1, "max": 6, "step": 1, "default": 3 },
+        { "type": "range", "id": "off_3", "label": "Combo 3 extra discount (₹)", "min": 0, "max": 2000, "step": 25, "default": 1425 },
+        { "type": "text", "id": "footer", "label": "Footer text", "default": "Mix & match colors and sizes · Perfect for siblings or backup pairs" }
+      ]
+    },
+    {
+      "type": "buy_buttons", "name": "Quantity + Add to cart", "limit": 1,
+      "settings": [
+        { "type": "text", "id": "atc_label", "label": "Button label", "default": "Add to cart" },
+        { "type": "text", "id": "soldout_label", "label": "Sold out label", "default": "Sold out" },
+        { "type": "checkbox", "id": "show_dynamic", "label": "Show Buy it now button", "default": false }
+      ]
+    },
+    {
+      "type": "pincode", "name": "Pincode checker", "limit": 1,
+      "settings": [
+        { "type": "text", "id": "placeholder", "label": "Placeholder", "default": "Enter pincode" },
+        { "type": "text", "id": "days", "label": "Standard delivery time", "default": "4–6 days" },
+        { "type": "text", "id": "fast_prefixes", "label": "Fast-delivery pincode prefixes", "default": "411,400", "info": "Comma-separated. E.g. 411 = Pune, 400 = Mumbai." },
+        { "type": "text", "id": "fast_days", "label": "Fast delivery time", "default": "1–2 days" },
+        { "type": "text", "id": "extra", "label": "Extra note", "default": "COD available" }
+      ]
+    },
+    {
+      "type": "trust", "name": "Trust icons", "limit": 1,
+      "settings": [
+        { "type": "image_picker", "id": "icon_1", "label": "Icon 1" }, { "type": "textarea", "id": "label_1", "label": "Label 1", "default": "Fast delivery\nfrom 50+ stores" },
+        { "type": "image_picker", "id": "icon_2", "label": "Icon 2" }, { "type": "textarea", "id": "label_2", "label": "Label 2", "default": "Free returns\n& exchanges" },
+        { "type": "image_picker", "id": "icon_3", "label": "Icon 3" }, { "type": "textarea", "id": "label_3", "label": "Label 3", "default": "Secure\ncheckout" }
+      ]
+    },
+    {
+      "type": "accordion", "name": "Accordion",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Product description" },
+        { "type": "checkbox", "id": "use_description", "label": "Show product description", "default": false },
+        { "type": "richtext", "id": "content", "label": "Content" },
+        { "type": "page", "id": "page", "label": "Or show a page's content" },
+        { "type": "checkbox", "id": "open", "label": "Open by default", "default": false }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Aretto Product",
+      "blocks": [
+        { "type": "rating" },
+        { "type": "title" },
+        { "type": "price" },
+        { "type": "divider" },
+        { "type": "features" },
+        { "type": "divider" },
+        { "type": "variant_picker" },
+        { "type": "divider" },
+        { "type": "info_box", "settings": { "style": "green", "icon": "shield" } },
+        { "type": "info_box", "settings": { "style": "orange", "icon": "video", "heading": "Not sure about the size?", "text": "<p>Book a free <strong>5-min video call</strong> with our fit experts. We'll measure live.</p>", "btn_label": "Book call" } },
+        { "type": "combos" },
+        { "type": "buy_buttons" },
+        { "type": "pincode" },
+        { "type": "trust" },
+        { "type": "accordion", "settings": { "title": "Why an expanding shoe matters" } },
+        { "type": "accordion", "settings": { "title": "Product description", "use_description": true } },
+        { "type": "accordion", "settings": { "title": "Return & refund" } },
+        { "type": "accordion", "settings": { "title": "Care instructions" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

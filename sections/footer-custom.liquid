@@ -1,0 +1,432 @@
+{%- liquid
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+-%}
+
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ bf }}:wght@300;400;500;600&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #cf-{{ section.id }} {
+    --cf-font: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    --cf-link: {{ section.settings.link_color }};
+    position: relative;
+    overflow: hidden;
+    background: {{ section.settings.bg_color }};
+    color: {{ section.settings.text_color }};
+    font-family: var(--cf-font);
+  }
+  #cf-{{ section.id }} a { color: inherit; }
+
+  /* decorative curve */
+  #cf-{{ section.id }} .cf-deco {
+    position: absolute;
+    right: 0; bottom: 0;
+    width: min(46%, 700px);
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  #cf-{{ section.id }} .cf-deco svg,
+  #cf-{{ section.id }} .cf-deco img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: right bottom; }
+
+  #cf-{{ section.id }} .cf-inner {
+    position: relative;
+    z-index: 1;
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 37%) minmax(0, 1fr);
+  }
+
+  /* ---------- Left ---------- */
+  #cf-{{ section.id }} .cf-left {
+    padding: {{ section.settings.padding_top }}px 56px {{ section.settings.padding_bottom }}px clamp(20px, 6.5%, 96px);
+    border-right: 1px dashed rgba(255,255,255,.18);
+  }
+  #cf-{{ section.id }} .cf-title {
+    font-family: var(--cf-font);
+    font-weight: 300;
+    font-size: clamp(38px, 4.4vw, {{ section.settings.title_size }}px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: {{ section.settings.text_color }};
+    margin: 0 0 36px;
+  }
+  #cf-{{ section.id }} .cf-sub {
+    font-size: 16px;
+    line-height: 1.5;
+    color: #BDBDBD;
+    margin: 0 0 30px;
+    max-width: 360px;
+  }
+  #cf-{{ section.id }} .cf-sub p { margin: 0; }
+
+  #cf-{{ section.id }} .cf-form { max-width: 365px; }
+  #cf-{{ section.id }} .cf-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 40px;
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 40px;
+  }
+  #cf-{{ section.id }} .cf-field input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    padding: 0 16px 0 18px;
+    font-family: var(--cf-font);
+    font-size: 14px;
+    color: {{ section.settings.text_color }};
+    box-shadow: none;
+  }
+  #cf-{{ section.id }} .cf-field input::placeholder { color: #BDBDBD; opacity: 1; }
+  #cf-{{ section.id }} .cf-field:focus-within { border-color: rgba(255,255,255,.7); }
+  #cf-{{ section.id }} .cf-field button {
+    flex: 0 0 auto;
+    height: 40px;
+    margin: -1px -1px -1px 0;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 40px;
+    background: #fff;
+    color: #111;
+    font-family: var(--cf-font);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity .2s ease;
+  }
+  #cf-{{ section.id }} .cf-field button:hover { opacity: .85; }
+  #cf-{{ section.id }} .cf-msg { margin: 10px 0 0 4px; font-size: 13px; }
+  #cf-{{ section.id }} .cf-msg--ok { color: #7BD88F; }
+  #cf-{{ section.id }} .cf-msg--err { color: #FF8A80; }
+
+  #cf-{{ section.id }} .cf-pay { margin-top: 62px; }
+  #cf-{{ section.id }} .cf-pay-title { font-size: 16px; color: #BDBDBD; margin: 0 0 22px; }
+  #cf-{{ section.id }} .cf-pay-logos { display: flex; align-items: center; flex-wrap: wrap; gap: 28px; }
+  #cf-{{ section.id }} .cf-pay-logos img {
+    height: {{ section.settings.logo_height }}px;
+    width: auto;
+    display: block;
+    {%- if section.settings.logos_white -%}filter: brightness(0) invert(1); opacity: .85;{%- endif -%}
+  }
+
+  /* ---------- Right ---------- */
+  #cf-{{ section.id }} .cf-right {
+    padding: {{ section.settings.padding_top }}px clamp(20px, 6.5%, 96px) {{ section.settings.padding_bottom }}px 60px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 40px;
+    row-gap: 50px;
+    align-content: start;
+  }
+  #cf-{{ section.id }} .cf-col-title {
+    font-family: var(--cf-font);
+    font-size: 17px;
+    font-weight: 500;
+    color: {{ section.settings.text_color }};
+    margin: 0 0 12px;
+  }
+  #cf-{{ section.id }} .cf-links { list-style: none; margin: 0; padding: 0; display: grid; gap: {{ section.settings.link_gap }}px; }
+  #cf-{{ section.id }} .cf-links a,
+  #cf-{{ section.id }} .cf-plain {
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--cf-link);
+    text-decoration: none;
+    transition: color .2s ease;
+  }
+  #cf-{{ section.id }} .cf-links a:hover { color: {{ section.settings.text_color }}; }
+  #cf-{{ section.id }} .cf-underline {
+    display: inline-block;
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--cf-link);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    transition: color .2s ease;
+  }
+  #cf-{{ section.id }} .cf-underline:hover { color: {{ section.settings.text_color }}; }
+
+  /* ---------- Bottom bar ---------- */
+  #cf-{{ section.id }} .cf-bottom {
+    position: relative;
+    z-index: 1;
+    border-top: 1px dashed rgba(255,255,255,.18);
+    padding: 18px clamp(20px, 6.5%, 96px);
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    font-size: 12.5px;
+    color: #8A8A8A;
+  }
+  #cf-{{ section.id }} .cf-bottom ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 20px; }
+  #cf-{{ section.id }} .cf-bottom a { text-decoration: none; }
+  #cf-{{ section.id }} .cf-bottom a:hover { color: #fff; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1099px) {
+    #cf-{{ section.id }} .cf-right { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 40px; }
+    #cf-{{ section.id }} .cf-left { padding-right: 40px; }
+  }
+  @media (max-width: 749px) {
+    #cf-{{ section.id }} .cf-inner { grid-template-columns: 1fr; }
+    #cf-{{ section.id }} .cf-left {
+      border-right: 0;
+      border-bottom: 1px dashed rgba(255,255,255,.18);
+      padding: 56px 20px 44px;
+    }
+    #cf-{{ section.id }} .cf-title { margin-bottom: 20px; }
+    #cf-{{ section.id }} .cf-form { max-width: none; }
+    #cf-{{ section.id }} .cf-pay { margin-top: 40px; }
+    #cf-{{ section.id }} .cf-right { padding: 44px 20px 56px; column-gap: 24px; row-gap: 38px; }
+    #cf-{{ section.id }} .cf-deco { width: 90%; height: 55%; opacity: .7; }
+    #cf-{{ section.id }} .cf-bottom { padding: 18px 20px; }
+  }
+</style>
+
+<footer id="cf-{{ section.id }}">
+  {%- if section.settings.show_deco -%}
+    <div class="cf-deco" aria-hidden="true">
+      {%- if section.settings.deco_image != blank -%}
+        {{ section.settings.deco_image | image_url: width: 1400 | image_tag: loading: 'lazy', alt: '' }}
+      {%- else -%}
+        <svg viewBox="0 0 600 560" preserveAspectRatio="xMaxYMax slice">
+          <defs>
+            <linearGradient id="cf-grad-{{ section.id }}" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#ffffff" stop-opacity=".02"/>
+              <stop offset=".6" stop-color="#ffffff" stop-opacity=".07"/>
+              <stop offset="1" stop-color="#ffffff" stop-opacity=".12"/>
+            </linearGradient>
+          </defs>
+          <path d="M600 0 L560 0 C 470 90, 540 260, 420 400 C 350 480, 250 540, 170 560 L 600 560 Z" fill="url(#cf-grad-{{ section.id }})"/>
+          <path d="M600 140 C 560 250, 470 330, 330 430 C 270 470, 230 520, 215 560 L 600 560 Z" fill="#ffffff" fill-opacity=".04"/>
+        </svg>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  <div class="cf-inner">
+    <!-- Left -->
+    <div class="cf-left">
+      {%- if section.settings.title != blank -%}<h2 class="cf-title">{{ section.settings.title }}</h2>{%- endif -%}
+      {%- if section.settings.subtitle != blank -%}<div class="cf-sub">{{ section.settings.subtitle }}</div>{%- endif -%}
+
+      {%- if section.settings.show_newsletter -%}
+        {%- form 'customer', id: 'cf-newsletter-{{ section.id }}', class: 'cf-form' -%}
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          <div class="cf-field">
+            <label for="cf-email-{{ section.id }}" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Email</label>
+            <input
+              id="cf-email-{{ section.id }}"
+              type="email"
+              name="contact[email]"
+              placeholder="{{ section.settings.placeholder }}"
+              autocomplete="email"
+              autocorrect="off"
+              autocapitalize="off"
+              required
+              value="{{ form.email }}"
+            >
+            <button type="submit">{{ section.settings.button_label }}</button>
+          </div>
+          {%- if form.posted_successfully? -%}
+            <p class="cf-msg cf-msg--ok" role="status">{{ section.settings.success_msg }}</p>
+          {%- elsif form.errors -%}
+            <p class="cf-msg cf-msg--err" role="alert">{{ form.errors.translated_fields.email | capitalize }} {{ form.errors.messages.email }}</p>
+          {%- endif -%}
+        {%- endform -%}
+      {%- endif -%}
+
+      {%- liquid
+        assign has_logos = false
+        if section.settings.pay_1 != blank or section.settings.pay_2 != blank or section.settings.pay_3 != blank or section.settings.pay_4 != blank
+          assign has_logos = true
+        endif
+      -%}
+      {%- if has_logos or section.settings.pay_title != blank -%}
+        <div class="cf-pay">
+          {%- if section.settings.pay_title != blank -%}<p class="cf-pay-title">{{ section.settings.pay_title }}</p>{%- endif -%}
+          {%- if has_logos -%}
+            <div class="cf-pay-logos">
+              {%- for n in (1..4) -%}
+                {%- assign key = 'pay_' | append: n -%}
+                {%- assign logo = section.settings[key] -%}
+                {%- if logo != blank -%}
+                  {{ logo | image_url: height: 80 | image_tag: loading: 'lazy', alt: logo.alt }}
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    <!-- Right -->
+    <div class="cf-right">
+      {%- for block in section.blocks -%}
+        <div class="cf-col" {{ block.shopify_attributes }}>
+          {%- if block.settings.title != blank -%}<h3 class="cf-col-title">{{ block.settings.title }}</h3>{%- endif -%}
+
+          {%- case block.type -%}
+            {%- when 'menu' -%}
+              {%- assign menu = linklists[block.settings.menu] -%}
+              <ul class="cf-links">
+                {%- if menu.links.size > 0 -%}
+                  {%- for link in menu.links -%}
+                    <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+                  {%- endfor -%}
+                {%- elsif request.design_mode -%}
+                  <li><span class="cf-plain">Choose a menu for this column →</span></li>
+                {%- endif -%}
+              </ul>
+
+            {%- when 'contact' -%}
+              <ul class="cf-links">
+                {%- if block.settings.email != blank -%}
+                  <li><a class="cf-underline" href="mailto:{{ block.settings.email }}">{{ block.settings.email }}</a></li>
+                {%- endif -%}
+                {%- if block.settings.phone != blank -%}
+                  <li><a class="cf-underline" href="tel:{{ block.settings.phone | remove: ' ' | remove: '-' }}">{{ block.settings.phone }}</a></li>
+                {%- endif -%}
+                {%- if block.settings.whatsapp != blank -%}
+                  <li><a class="cf-underline" href="https://wa.me/{{ block.settings.whatsapp | remove: ' ' | remove: '+' | remove: '-' }}" target="_blank" rel="noopener">WhatsApp us</a></li>
+                {%- endif -%}
+              </ul>
+
+            {%- when 'address' -%}
+              {%- liquid
+                assign map_url = block.settings.map_link
+                if map_url == blank
+                  assign q = block.settings.address | strip_newlines | url_encode
+                  assign map_url = 'https://www.google.com/maps/search/?api=1&query=' | append: q
+                endif
+              -%}
+              {%- if block.settings.address != blank -%}
+                <a class="cf-underline" href="{{ map_url }}" target="_blank" rel="noopener">{{ block.settings.address | newline_to_br }}</a>
+              {%- endif -%}
+          {%- endcase -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+
+  {%- if section.settings.show_bottom -%}
+    <div class="cf-bottom">
+      <span>&copy; {{ 'now' | date: '%Y' }} {{ section.settings.copyright | default: shop.name }}</span>
+      {%- if section.settings.policies_menu != blank -%}
+        <ul>
+          {%- for link in linklists[section.settings.policies_menu].links -%}
+            <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+</footer>
+
+{% schema %}
+{
+  "name": "Custom Footer",
+  "tag": "div",
+  "class": "section-custom-footer",
+  "enabled_on": { "groups": ["footer"] },
+  "settings": [
+    { "type": "header", "content": "Newsletter" },
+    { "type": "text", "id": "title", "label": "Title", "default": "Stay Updated" },
+    { "type": "richtext", "id": "subtitle", "label": "Text", "default": "<p>Be the first to know about our latest drops. Receive 5% off on your first order.</p>" },
+    { "type": "checkbox", "id": "show_newsletter", "label": "Show email signup", "default": true },
+    { "type": "text", "id": "placeholder", "label": "Input placeholder", "default": "Enter your email" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Subscribe" },
+    { "type": "text", "id": "success_msg", "label": "Success message", "default": "Thanks for subscribing! Check your inbox." },
+
+    { "type": "header", "content": "Payment logos" },
+    { "type": "text", "id": "pay_title", "label": "Title", "default": "Multiple Payment Options" },
+    { "type": "image_picker", "id": "pay_1", "label": "Logo 1" },
+    { "type": "image_picker", "id": "pay_2", "label": "Logo 2" },
+    { "type": "image_picker", "id": "pay_3", "label": "Logo 3" },
+    { "type": "image_picker", "id": "pay_4", "label": "Logo 4" },
+    { "type": "range", "id": "logo_height", "label": "Logo height", "min": 14, "max": 40, "step": 2, "unit": "px", "default": 22 },
+    { "type": "checkbox", "id": "logos_white", "label": "Make logos white", "default": true, "info": "Turns colored logos white to match the dark footer." },
+
+    { "type": "header", "content": "Bottom bar" },
+    { "type": "checkbox", "id": "show_bottom", "label": "Show copyright bar", "default": false },
+    { "type": "text", "id": "copyright", "label": "Copyright name", "info": "Leave empty to use your store name." },
+    { "type": "link_list", "id": "policies_menu", "label": "Policy links menu" },
+
+    { "type": "header", "content": "Decoration" },
+    { "type": "checkbox", "id": "show_deco", "label": "Show background curve", "default": true },
+    { "type": "image_picker", "id": "deco_image", "label": "Custom decoration image (optional)", "info": "Upload your own shape (transparent PNG/SVG) to replace the default curve." },
+
+    { "type": "header", "content": "Font" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Font", "default": true, "info": "Turn off to use your theme's font instead." },
+    { "type": "text", "id": "body_font", "label": "Font (Google Font name)", "default": "Inter" },
+
+    { "type": "header", "content": "Style" },
+    { "type": "color", "id": "bg_color", "label": "Background", "default": "#000000" },
+    { "type": "color", "id": "text_color", "label": "Headings & title", "default": "#FFFFFF" },
+    { "type": "color", "id": "link_color", "label": "Links", "default": "#A8A8A8" },
+    { "type": "range", "id": "title_size", "label": "Title size", "min": 32, "max": 80, "step": 4, "unit": "px", "default": 64 },
+    { "type": "range", "id": "link_gap", "label": "Space between links", "min": 4, "max": 20, "step": 1, "unit": "px", "default": 8 },
+    { "type": "range", "id": "max_width", "label": "Content width", "min": 1000, "max": 1800, "step": 20, "unit": "px", "default": 1440 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 96 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 120 }
+  ],
+  "blocks": [
+    {
+      "type": "menu",
+      "name": "Menu column",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Heading", "default": "About" },
+        { "type": "link_list", "id": "menu", "label": "Menu" }
+      ]
+    },
+    {
+      "type": "contact",
+      "name": "Contact column",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "title", "label": "Heading", "default": "Contact" },
+        { "type": "text", "id": "email", "label": "Email", "default": "support@wearetto.com" },
+        { "type": "text", "id": "phone", "label": "Phone", "default": "+919309192340" },
+        { "type": "text", "id": "whatsapp", "label": "WhatsApp number (optional)", "info": "With country code, e.g. 919309192340" }
+      ]
+    },
+    {
+      "type": "address",
+      "name": "Address column",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Heading", "default": "Visit us" },
+        { "type": "textarea", "id": "address", "label": "Address", "default": "UG 21-26, Clover Hills Plaza,\nNIBM Undri Road, Pune -\n411048 India" },
+        { "type": "url", "id": "map_link", "label": "Google Maps link (optional)", "info": "Leave empty to auto-search the address on Google Maps." }
+      ]
+    }
+  ],
+  "max_blocks": 9,
+  "presets": [
+    {
+      "name": "Custom Footer",
+      "blocks": [
+        { "type": "menu", "settings": { "title": "About" } },
+        { "type": "menu", "settings": { "title": "Help and Support" } },
+        { "type": "menu", "settings": { "title": "Community" } },
+        { "type": "contact" },
+        { "type": "address" }
+      ]
+    }
+  ]
+}
+{% endschema %}

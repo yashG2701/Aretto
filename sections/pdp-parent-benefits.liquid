@@ -1,0 +1,230 @@
+{%- liquid
+  assign hf = section.settings.heading_font | strip | replace: ' ', '+'
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+-%}
+
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ hf }}&family={{ bf }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #wps-{{ section.id }} {
+    --wps-heading-font: {% if section.settings.load_google_fonts %}'{{ section.settings.heading_font }}', {% endif %}var(--font-heading-family, sans-serif);
+    --wps-body-font: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    background: {{ section.settings.bg_color }};
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+    font-family: var(--wps-body-font);
+  }
+  #wps-{{ section.id }} .wps-inner {
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  #wps-{{ section.id }} .wps-eyebrow {
+    font-family: var(--wps-body-font);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: {{ section.settings.eyebrow_color }};
+    margin: 0 0 14px;
+  }
+  #wps-{{ section.id }} .wps-heading {
+    font-family: var(--wps-heading-font);
+    font-weight: 400;
+    font-size: clamp(28px, 4vw, {{ section.settings.heading_size }}px);
+    line-height: 1.05;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: {{ section.settings.heading_color }};
+    margin: 0 0 40px;
+  }
+  #wps-{{ section.id }} .wps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    text-align: left;
+  }
+  #wps-{{ section.id }} .wps-card {
+    background: #fff;
+    border: 1px solid #ebebeb;
+    border-radius: 10px;
+    padding: 18px 22px 22px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  #wps-{{ section.id }} .wps-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+  }
+  #wps-{{ section.id }} .wps-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 26px;
+  }
+  #wps-{{ section.id }} .wps-icon svg,
+  #wps-{{ section.id }} .wps-icon img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+  }
+  #wps-{{ section.id }} .wps-card-title {
+    font-family: var(--wps-body-font);
+    font-size: 15px;
+    font-weight: 600;
+    color: #111;
+    margin: 0 0 10px;
+  }
+  #wps-{{ section.id }} .wps-card-text {
+    font-family: var(--wps-body-font);
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #444;
+    margin: 0;
+  }
+  #wps-{{ section.id }} .wps-card-text p { margin: 0; }
+
+  @media (max-width: 749px) {
+    #wps-{{ section.id }} .wps-grid { grid-template-columns: 1fr; }
+    #wps-{{ section.id }} .wps-heading { margin-bottom: 28px; }
+  }
+</style>
+
+<section id="wps-{{ section.id }}">
+  <div class="wps-inner">
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="wps-eyebrow">{{ section.settings.eyebrow }}</p>
+    {%- endif -%}
+    {%- if section.settings.heading != blank -%}
+      <h2 class="wps-heading">{{ section.settings.heading }}</h2>
+    {%- endif -%}
+
+    <div class="wps-grid">
+      {%- for block in section.blocks -%}
+        <div class="wps-card" {{ block.shopify_attributes }}>
+          <div class="wps-icon" style="background: {{ block.settings.icon_bg }}; color: {{ block.settings.icon_color }};">
+            {%- if block.settings.custom_icon != blank -%}
+              <img src="{{ block.settings.custom_icon | image_url: width: 64 }}" alt="" loading="lazy">
+            {%- else -%}
+              {%- case block.settings.icon -%}
+                {%- when 'expand' -%}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></svg>
+                {%- when 'check' -%}
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                {%- when 'child' -%}
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="4.5" r="2.5"/><path d="M6 9.5c0-.8.7-1.3 1.4-1l4.6 1.8 4.6-1.8c.7-.3 1.4.2 1.4 1 0 .4-.3.8-.7 1L14 11.8V15l1.6 5.2c.2.8-.4 1.5-1.2 1.5-.5 0-1-.4-1.1-.9L12 17l-1.3 3.8c-.1.5-.6.9-1.1.9-.8 0-1.4-.7-1.2-1.5L10 15v-3.2l-3.3-1.3c-.4-.2-.7-.6-.7-1z"/></svg>
+                {%- when 'star' -%}
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z"/></svg>
+                {%- when 'heart' -%}
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 4.5 6.8 4.5c2.1 0 3.6 1.2 5.2 3 1.6-1.8 3.1-3 5.2-3 3.8 0 5.9 4 4.4 7.3C19.5 16.4 12 21 12 21z"/></svg>
+              {%- endcase -%}
+            {%- endif -%}
+          </div>
+          {%- if block.settings.title != blank -%}
+            <h3 class="wps-card-title">{{ block.settings.title }}</h3>
+          {%- endif -%}
+          {%- if block.settings.text != blank -%}
+            <div class="wps-card-text">{{ block.settings.text }}</div>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Why Parents Switch",
+  "tag": "div",
+  "class": "section-why-parents-switch",
+  "settings": [
+    { "type": "header", "content": "Content" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow text", "default": "Why parents switch" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Built for growing feet - and busy families" },
+
+    { "type": "header", "content": "Fonts" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Fonts", "default": true, "info": "Turn off to use your theme's fonts instead." },
+    { "type": "text", "id": "heading_font", "label": "Heading font (Google Font name)", "default": "Anton" },
+    { "type": "text", "id": "body_font", "label": "Body font (Google Font name)", "default": "Inter" },
+
+    { "type": "header", "content": "Style" },
+    { "type": "color", "id": "bg_color", "label": "Background", "default": "#FFFFFF" },
+    { "type": "color", "id": "eyebrow_color", "label": "Eyebrow color", "default": "#3B3BD6" },
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#111111" },
+    { "type": "range", "id": "heading_size", "label": "Heading max size", "min": 28, "max": 72, "step": 2, "unit": "px", "default": 42 },
+    { "type": "range", "id": "max_width", "label": "Content width", "min": 600, "max": 1400, "step": 20, "unit": "px", "default": 720 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 60 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 60 }
+  ],
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Feature card",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "expand", "label": "Expand arrows" },
+            { "value": "check", "label": "Check badge" },
+            { "value": "child", "label": "Child" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" }
+          ],
+          "default": "expand"
+        },
+        { "type": "image_picker", "id": "custom_icon", "label": "Custom icon (optional)", "info": "Overrides the icon above." },
+        { "type": "color", "id": "icon_bg", "label": "Icon background", "default": "#FDEBE2" },
+        { "type": "color", "id": "icon_color", "label": "Icon color", "default": "#F07A3D" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Feature title" },
+        { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Describe the feature here.</p>" }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "Why Parents Switch",
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "icon": "expand",
+            "icon_bg": "#FDEBE2",
+            "icon_color": "#F07A3D",
+            "title": "Expands up to 3 sizes",
+            "text": "<p>The sole widens with every growth spurt — one pair keeps fitting while fixed-size shoes get replaced.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "icon": "check",
+            "icon_bg": "#E3F3E6",
+            "icon_color": "#2E9E4F",
+            "title": "Pediatrician-approved",
+            "text": "<p>Wide toe box and flexible flat sole support natural gait and healthy foot development.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "icon": "child",
+            "icon_bg": "#E6E6FB",
+            "icon_color": "#3B3BD6",
+            "title": "Made for city childhoods",
+            "text": "<p>Anti-skid on marble and tiles, machine washable after park mud, easy for kids to wear alone.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

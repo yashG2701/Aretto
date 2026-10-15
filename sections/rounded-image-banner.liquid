@@ -1,0 +1,179 @@
+{%- liquid
+  assign adapt = false
+  if section.settings.sizing == 'adapt'
+    assign adapt = true
+  endif
+-%}
+
+<style>
+  #rib-{{ section.id }} {
+    background: {{ section.settings.bg_color }};
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+  }
+  #rib-{{ section.id }} .rib-inner {
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+  }
+  #rib-{{ section.id }} .rib-media {
+    position: relative;
+    display: block;
+    width: 100%;
+    border-radius: {{ section.settings.radius }}px;
+    overflow: hidden;
+    background: #eee;
+    {%- if section.settings.shadow -%}
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    {%- endif -%}
+  }
+
+  {%- if adapt and section.settings.image != blank -%}
+  /* Adapt mode: the image sets its own height */
+  #rib-{{ section.id }} .rib-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: transform .6s ease;
+  }
+  {%- else -%}
+  /* Fixed crop mode (or placeholder) */
+  #rib-{{ section.id }} .rib-media {
+    aspect-ratio: 1404 / 457;
+  }
+  #rib-{{ section.id }} .rib-media img,
+  #rib-{{ section.id }} .rib-media svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: {{ section.settings.focal_point }};
+    transition: transform .6s ease;
+  }
+  {%- endif -%}
+
+  {%- if section.settings.hover_zoom -%}
+  #rib-{{ section.id }} .rib-media:hover img { transform: scale(1.03); }
+  {%- endif -%}
+  #rib-{{ section.id }} .rib-mobile { display: none; }
+
+  @media (max-width: 749px) {
+    #rib-{{ section.id }} {
+      padding: {{ section.settings.padding_top | times: 0.6 | round }}px 16px {{ section.settings.padding_bottom | times: 0.6 | round }}px;
+    }
+    #rib-{{ section.id }} .rib-media {
+      border-radius: {{ section.settings.radius | times: 0.75 | round }}px;
+      {%- unless adapt and section.settings.image != blank -%}
+      aspect-ratio: {{ section.settings.mobile_ratio }};
+      {%- endunless -%}
+    }
+    {%- if section.settings.image_mobile != blank -%}
+    #rib-{{ section.id }} .rib-desktop { display: none; }
+    #rib-{{ section.id }} .rib-mobile { display: block; }
+    {%- endif -%}
+  }
+</style>
+
+<section id="rib-{{ section.id }}">
+  <div class="rib-inner">
+    {%- if section.settings.link != blank -%}
+      <a href="{{ section.settings.link }}" class="rib-media">
+    {%- else -%}
+      <div class="rib-media">
+    {%- endif -%}
+
+      {%- if section.settings.image != blank -%}
+        {{ section.settings.image
+          | image_url: width: 2800
+          | image_tag:
+            class: 'rib-desktop',
+            loading: 'lazy',
+            widths: '750, 1100, 1500, 2000, 2800',
+            sizes: '(min-width: 1440px) 1404px, 100vw',
+            alt: section.settings.image.alt
+        }}
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag: 'rib-desktop' }}
+      {%- endif -%}
+
+      {%- if section.settings.image_mobile != blank -%}
+        {{ section.settings.image_mobile
+          | image_url: width: 1200
+          | image_tag:
+            class: 'rib-mobile',
+            loading: 'lazy',
+            widths: '450, 750, 1200',
+            sizes: '100vw',
+            alt: section.settings.image_mobile.alt
+        }}
+      {%- endif -%}
+
+    {%- if section.settings.link != blank -%}
+      </a>
+    {%- else -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Rounded Image Banner",
+  "tag": "div",
+  "class": "section-rounded-image-banner",
+  "settings": [
+    { "type": "header", "content": "Image" },
+    { "type": "image_picker", "id": "image", "label": "Desktop image", "info": "Any size works in 'Adapt to image' mode." },
+    { "type": "image_picker", "id": "image_mobile", "label": "Mobile image (optional)", "info": "Recommended: 1200 × 1200 px or 1200 × 1500 px" },
+    {
+      "type": "select",
+      "id": "sizing",
+      "label": "Image sizing",
+      "options": [
+        { "value": "adapt", "label": "Adapt to image (no crop)" },
+        { "value": "crop", "label": "Fixed shape (crop to fit)" }
+      ],
+      "default": "adapt"
+    },
+    {
+      "type": "select",
+      "id": "focal_point",
+      "label": "Image focus (fixed shape only)",
+      "options": [
+        { "value": "center center", "label": "Center" },
+        { "value": "center top", "label": "Top" },
+        { "value": "center bottom", "label": "Bottom" },
+        { "value": "left center", "label": "Left" },
+        { "value": "right center", "label": "Right" },
+        { "value": "70% center", "label": "Right of center" }
+      ],
+      "default": "70% center"
+    },
+    {
+      "type": "select",
+      "id": "mobile_ratio",
+      "label": "Mobile shape (fixed shape only)",
+      "options": [
+        { "value": "1404 / 457", "label": "Same as desktop" },
+        { "value": "16 / 9", "label": "Wide (16:9)" },
+        { "value": "4 / 3", "label": "Standard (4:3)" },
+        { "value": "1 / 1", "label": "Square" },
+        { "value": "4 / 5", "label": "Portrait (4:5)" }
+      ],
+      "default": "4 / 3"
+    },
+    { "type": "url", "id": "link", "label": "Link (optional)" },
+
+    { "type": "header", "content": "Style" },
+    { "type": "color", "id": "bg_color", "label": "Background", "default": "#FDF9F2" },
+    { "type": "range", "id": "radius", "label": "Corner radius", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "checkbox", "id": "shadow", "label": "Soft shadow", "default": false },
+    { "type": "checkbox", "id": "hover_zoom", "label": "Slight zoom on hover", "default": false },
+    { "type": "range", "id": "max_width", "label": "Max width", "min": 1004, "max": 1804, "step": 8, "unit": "px", "default": 1404 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 32 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 32 }
+  ],
+  "presets": [
+    { "name": "Rounded Image Banner" }
+  ]
+}
+{% endschema %}

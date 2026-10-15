@@ -1,0 +1,335 @@
+{%- liquid
+  assign hf = section.settings.heading_font | strip | replace: ' ', '+'
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+-%}
+
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ hf }}:wght@{{ section.settings.heading_weight }}&family={{ bf }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #faq-{{ section.id }} {
+    --faq-heading-font: {% if section.settings.load_google_fonts %}'{{ section.settings.heading_font }}', {% endif %}var(--font-heading-family, sans-serif);
+    --faq-body-font: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    position: relative;
+    overflow: hidden;
+    background: {{ section.settings.bg_light }};
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+    font-family: var(--faq-body-font);
+    color: #111;
+  }
+  /* diagonal background shapes */
+  #faq-{{ section.id }}::before,
+  #faq-{{ section.id }}::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    background: {{ section.settings.bg_dark }};
+  }
+  #faq-{{ section.id }}::before { inset: 0; clip-path: polygon(0 0, 35% 0, 22% 100%, 0 100%); }
+  #faq-{{ section.id }}::after  { inset: 0; clip-path: polygon(0 88%, 42% 100%, 0 100%); opacity: .6; }
+  {%- unless section.settings.show_shapes -%}
+  #faq-{{ section.id }}::before, #faq-{{ section.id }}::after { display: none; }
+  {%- endunless -%}
+
+  #faq-{{ section.id }} .faq-card {
+    position: relative;
+    z-index: 1;
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+    background: {{ section.settings.card_color }};
+    border-radius: {{ section.settings.card_radius }}px;
+    padding: 70px clamp(24px, 7.5%, 96px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 60px;
+    align-items: start;
+  }
+
+  /* ---------- Left ---------- */
+  #faq-{{ section.id }} .faq-label {
+    font-family: var(--faq-heading-font);
+    font-weight: {{ section.settings.heading_weight }};
+    font-size: 32px;
+    line-height: 1;
+    text-transform: uppercase;
+    margin: 0 0 30px;
+  }
+  #faq-{{ section.id }} .faq-heading {
+    font-family: var(--faq-heading-font);
+    font-weight: {{ section.settings.heading_weight }};
+    font-size: clamp(30px, 4vw, {{ section.settings.heading_size }}px);
+    line-height: 1.12;
+    text-transform: uppercase;
+    color: {{ section.settings.heading_color }};
+    margin: 0 0 72px;
+    max-width: 440px;
+  }
+  #faq-{{ section.id }} .faq-btn {
+    display: inline-block;
+    background: {{ section.settings.button_color }};
+    color: {{ section.settings.button_text_color }};
+    font-family: var(--faq-body-font);
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    text-decoration: none;
+    letter-spacing: .01em;
+    padding: 12px 28px;
+    border-radius: 3px;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  #faq-{{ section.id }} .faq-btn:hover { opacity: .88; transform: translateY(-1px); }
+  #faq-{{ section.id }} .faq-support {
+    margin-top: 26px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #222;
+  }
+  #faq-{{ section.id }} .faq-support p { margin: 0; }
+  #faq-{{ section.id }} .faq-support strong { font-weight: 700; color: #111; }
+
+  /* ---------- Accordion ---------- */
+  #faq-{{ section.id }} .faq-item { border-bottom: 1px solid #E3E3E3; }
+  #faq-{{ section.id }} .faq-q {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 0;
+    cursor: pointer;
+    font-family: var(--faq-body-font);
+    font-size: 16px;
+    font-weight: 500;
+    color: #111;
+  }
+  #faq-{{ section.id }} .faq-item:first-child .faq-q { padding-top: 6px; }
+  #faq-{{ section.id }} .faq-q::-webkit-details-marker { display: none; }
+  #faq-{{ section.id }} .faq-q:focus-visible { outline: 2px solid {{ section.settings.button_color }}; outline-offset: 4px; border-radius: 2px; }
+  #faq-{{ section.id }} .faq-icon {
+    flex: 0 0 auto;
+    width: 14px; height: 14px;
+    margin-right: 12px;
+    position: relative;
+    transition: transform .3s ease;
+  }
+  #faq-{{ section.id }} .faq-icon::before,
+  #faq-{{ section.id }} .faq-icon::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    background: #777;
+    transform: translate(-50%, -50%);
+  }
+  #faq-{{ section.id }} .faq-icon::before { width: 14px; height: 1.5px; }
+  #faq-{{ section.id }} .faq-icon::after  { width: 1.5px; height: 14px; }
+  #faq-{{ section.id }} .faq-item[open] .faq-icon { transform: rotate(45deg); }
+
+  #faq-{{ section.id }} .faq-a-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .35s ease;
+  }
+  #faq-{{ section.id }} .faq-item.is-open .faq-a-wrap { grid-template-rows: 1fr; }
+  #faq-{{ section.id }} .faq-a { overflow: hidden; }
+  #faq-{{ section.id }} .faq-a-inner {
+    padding: 0 40px 20px 0;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: #4A4A4A;
+  }
+  #faq-{{ section.id }} .faq-a-inner p { margin: 0 0 10px; }
+  #faq-{{ section.id }} .faq-a-inner p:last-child { margin: 0; }
+  #faq-{{ section.id }} .faq-a-inner a { color: {{ section.settings.button_color }}; }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 849px) {
+    #faq-{{ section.id }} {
+      padding: {{ section.settings.padding_top | times: 0.5 | round }}px 16px {{ section.settings.padding_bottom | times: 0.5 | round }}px;
+    }
+    #faq-{{ section.id }} .faq-card { grid-template-columns: 1fr; gap: 36px; padding: 40px 22px; }
+    #faq-{{ section.id }} .faq-label { font-size: 26px; margin-bottom: 18px; }
+    #faq-{{ section.id }} .faq-heading { margin-bottom: 28px; }
+    #faq-{{ section.id }} .faq-q { font-size: 15px; padding: 18px 0; }
+    #faq-{{ section.id }} .faq-icon { margin-right: 4px; }
+    #faq-{{ section.id }} .faq-a-inner { padding-right: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #faq-{{ section.id }} .faq-a-wrap, #faq-{{ section.id }} .faq-icon { transition: none; }
+  }
+</style>
+
+<section id="faq-{{ section.id }}">
+  <div class="faq-card">
+    <div class="faq-left">
+      {%- if section.settings.label != blank -%}<p class="faq-label">{{ section.settings.label }}</p>{%- endif -%}
+      {%- if section.settings.heading != blank -%}<h2 class="faq-heading">{{ section.settings.heading }}</h2>{%- endif -%}
+      {%- if section.settings.button_label != blank -%}
+        <a class="faq-btn" href="{{ section.settings.button_link | default: '/pages/contact' }}">{{ section.settings.button_label }}</a>
+      {%- endif -%}
+      {%- if section.settings.support_text != blank -%}
+        <div class="faq-support">{{ section.settings.support_text }}</div>
+      {%- endif -%}
+    </div>
+
+    <div class="faq-list">
+      {%- for block in section.blocks -%}
+        <details class="faq-item" {{ block.shopify_attributes }}>
+          <summary class="faq-q">
+            <span>{{ block.settings.question }}</span>
+            <span class="faq-icon" aria-hidden="true"></span>
+          </summary>
+          <div class="faq-a-wrap">
+            <div class="faq-a">
+              <div class="faq-a-inner">{{ block.settings.answer }}</div>
+            </div>
+          </div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{%- if section.settings.faq_schema and section.blocks.size > 0 -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {%- for block in section.blocks -%}
+    {
+      "@type": "Question",
+      "name": {{ block.settings.question | strip_html | json }},
+      "acceptedAnswer": { "@type": "Answer", "text": {{ block.settings.answer | strip_html | json }} }
+    }{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ]
+}
+</script>
+{%- endif -%}
+
+<script>
+  (function () {
+    var root = document.getElementById('faq-{{ section.id }}');
+    if (!root || root.dataset.faqReady) return;
+    root.dataset.faqReady = '1';
+
+    var items = Array.prototype.slice.call(root.querySelectorAll('.faq-item'));
+    var single = {{ section.settings.one_at_a_time | json }};
+
+    function close(item) {
+      item.classList.remove('is-open');
+      var wrap = item.querySelector('.faq-a-wrap');
+      var done = function () { if (!item.classList.contains('is-open')) item.removeAttribute('open'); wrap.removeEventListener('transitionend', done); };
+      wrap.addEventListener('transitionend', done);
+      setTimeout(done, 400);
+    }
+    function open(item) {
+      item.setAttribute('open', '');
+      requestAnimationFrame(function () { item.classList.add('is-open'); });
+      if (single) items.forEach(function (o) { if (o !== item && o.hasAttribute('open')) close(o); });
+    }
+
+    items.forEach(function (item) {
+      item.querySelector('summary').addEventListener('click', function (e) {
+        e.preventDefault();
+        if (item.classList.contains('is-open')) close(item); else open(item);
+      });
+    });
+
+    {%- if section.settings.open_first -%}
+    if (items[0]) { items[0].setAttribute('open', ''); items[0].classList.add('is-open'); }
+    {%- endif -%}
+
+    document.addEventListener('shopify:block:select', function (e) {
+      var idx = items.indexOf(e.target);
+      if (idx > -1 && !items[idx].classList.contains('is-open')) open(items[idx]);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "FAQ – Help",
+  "tag": "div",
+  "class": "section-faq-help",
+  "settings": [
+    { "type": "header", "content": "Left column" },
+    { "type": "text", "id": "label", "label": "Small label", "default": "FAQ" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Have a question? We are here to help" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Contact us" },
+    { "type": "url", "id": "button_link", "label": "Button link" },
+    {
+      "type": "richtext",
+      "id": "support_text",
+      "label": "Support info",
+      "default": "<p>Our customer support is available</p><p><strong>Monday to Friday</strong>: <strong>8am-8:30pm.</strong></p><p>Average answer time: <strong>18h</strong></p>"
+    },
+
+    { "type": "header", "content": "Questions" },
+    { "type": "checkbox", "id": "one_at_a_time", "label": "Only one answer open at a time", "default": true },
+    { "type": "checkbox", "id": "open_first", "label": "Open first question by default", "default": false },
+    { "type": "checkbox", "id": "faq_schema", "label": "Add FAQ schema for Google", "default": true, "info": "Helps questions appear as rich results in search. Use on one FAQ section per page." },
+
+    { "type": "header", "content": "Fonts" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Fonts", "default": true, "info": "Turn off to use your theme's fonts instead." },
+    { "type": "text", "id": "heading_font", "label": "Heading font (Google Font name)", "default": "Oswald" },
+    {
+      "type": "select", "id": "heading_weight", "label": "Heading weight",
+      "options": [
+        { "value": "400", "label": "Regular" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semibold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "500",
+      "info": "Use Regular if your heading font is Anton."
+    },
+    { "type": "text", "id": "body_font", "label": "Body font (Google Font name)", "default": "Inter" },
+
+    { "type": "header", "content": "Colors" },
+    { "type": "color", "id": "bg_light", "label": "Background (light)", "default": "#D9CFF7" },
+    { "type": "color", "id": "bg_dark", "label": "Background shape (dark)", "default": "#C8BCE5" },
+    { "type": "checkbox", "id": "show_shapes", "label": "Show diagonal background shapes", "default": true },
+    { "type": "color", "id": "card_color", "label": "Card background", "default": "#FFFFFF" },
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#111111" },
+    { "type": "color", "id": "button_color", "label": "Button color", "default": "#2323F0" },
+    { "type": "color", "id": "button_text_color", "label": "Button text", "default": "#FFFFFF" },
+
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "max_width", "label": "Card width", "min": 800, "max": 1600, "step": 20, "unit": "px", "default": 1260 },
+    { "type": "range", "id": "heading_size", "label": "Heading max size", "min": 28, "max": 72, "step": 2, "unit": "px", "default": 50 },
+    { "type": "range", "id": "card_radius", "label": "Card corner radius", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 0 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 76 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 28 }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "Lorem ipsemes why is that lorem??" },
+        { "type": "richtext", "id": "answer", "label": "Answer", "default": "<p>Write the answer to this question here.</p>" }
+      ]
+    }
+  ],
+  "max_blocks": 30,
+  "presets": [
+    {
+      "name": "FAQ – Help",
+      "blocks": [
+        { "type": "question", "settings": { "question": "Lorem ipsemes why is that lorem??" } },
+        { "type": "question", "settings": { "question": "What is lorem, Lorem ipsemes why is that lorem??" } },
+        { "type": "question", "settings": { "question": "Lorem ipsemes why is that lorem??" } },
+        { "type": "question", "settings": { "question": "Lorem ipsemes why is that lorem??" } },
+        { "type": "question", "settings": { "question": "What is lorem, Lorem ipsemes why is that lorem??" } },
+        { "type": "question", "settings": { "question": "What is lorem, Lorem ipsemes why is that lorem??" } },
+        { "type": "question", "settings": { "question": "What is lorem, Lorem ipsemes why is that lorem??" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,417 @@
+{%- liquid
+  assign hf = section.settings.heading_font | strip | replace: ' ', '+'
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+-%}
+
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ hf }}:wght@{{ section.settings.heading_weight }}&family={{ bf }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #ftv-{{ section.id }} {
+    --ftv-heading-font: {% if section.settings.load_google_fonts %}'{{ section.settings.heading_font }}', {% endif %}var(--font-heading-family, sans-serif);
+    --ftv-body-font: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    background: {{ section.settings.bg_color }};
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+    font-family: var(--ftv-body-font);
+  }
+  #ftv-{{ section.id }} .ftv-inner { max-width: {{ section.settings.max_width }}px; margin: 0 auto; }
+
+  #ftv-{{ section.id }} .ftv-head { text-align: center; margin-bottom: 48px; }
+  #ftv-{{ section.id }} .ftv-eyebrow {
+    font-family: var(--ftv-body-font);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: {{ section.settings.eyebrow_color }};
+    margin: 0 0 12px;
+  }
+  #ftv-{{ section.id }} .ftv-heading {
+    font-family: var(--ftv-heading-font);
+    font-weight: {{ section.settings.heading_weight }};
+    font-size: clamp(26px, 4vw, {{ section.settings.heading_size }}px);
+    line-height: 1.1;
+    text-transform: uppercase;
+    color: {{ section.settings.heading_color }};
+    margin: 0;
+  }
+
+  /* ---------- Card ---------- */
+  #ftv-{{ section.id }} .ftv-card {
+    background: {{ section.settings.card_color }};
+    border-radius: {{ section.settings.card_radius }}px;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 1fr minmax(0, {{ section.settings.media_width }}px);
+    gap: 40px;
+    align-items: center;
+  }
+
+  /* ---------- List ---------- */
+  #ftv-{{ section.id }} .ftv-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 30px;
+    max-width: 560px;
+  }
+  #ftv-{{ section.id }} .ftv-item + .ftv-item { margin-top: 30px; }
+  #ftv-{{ section.id }} .ftv-tab {
+    display: block;
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--ftv-heading-font);
+    font-weight: {{ section.settings.heading_weight }};
+    font-size: clamp(20px, 2.2vw, {{ section.settings.item_size }}px);
+    line-height: 1.15;
+    text-transform: uppercase;
+    color: {{ section.settings.inactive_color }};
+    transition: color .3s ease;
+  }
+  #ftv-{{ section.id }} .ftv-tab:hover { color: {{ section.settings.hover_color }}; }
+  #ftv-{{ section.id }} .ftv-item.is-active .ftv-tab { color: {{ section.settings.active_color }}; cursor: default; }
+  #ftv-{{ section.id }} .ftv-tab:focus-visible { outline: 2px solid {{ section.settings.eyebrow_color }}; outline-offset: 4px; border-radius: 4px; }
+
+  /* smooth open/close */
+  #ftv-{{ section.id }} .ftv-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .45s ease;
+  }
+  #ftv-{{ section.id }} .ftv-item.is-active .ftv-panel { grid-template-rows: 1fr; }
+  #ftv-{{ section.id }} .ftv-panel-inner { overflow: hidden; }
+  #ftv-{{ section.id }} .ftv-desc {
+    font-family: var(--ftv-body-font);
+    font-size: 14px;
+    line-height: 1.55;
+    color: {{ section.settings.text_color }};
+    padding-top: 8px;
+    opacity: 0;
+    transition: opacity .3s ease;
+  }
+  #ftv-{{ section.id }} .ftv-item.is-active .ftv-desc { opacity: 1; transition-delay: .15s; }
+  #ftv-{{ section.id }} .ftv-desc p { margin: 0; }
+
+  /* progress bar (only when auto-rotate is on) */
+  #ftv-{{ section.id }} .ftv-progress {
+    height: 2px;
+    margin-top: 14px;
+    background: rgba(255,255,255,.15);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+  }
+  #ftv-{{ section.id }}.ftv-auto .ftv-item.is-active .ftv-progress { display: block; }
+  #ftv-{{ section.id }} .ftv-progress span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: {{ section.settings.active_color }};
+  }
+  #ftv-{{ section.id }}.ftv-auto .ftv-item.is-active .ftv-progress span {
+    animation: ftv-fill-{{ section.id }} var(--ftv-duration, 6s) linear forwards;
+  }
+  #ftv-{{ section.id }}.ftv-paused .ftv-progress span { animation-play-state: paused !important; }
+  @keyframes ftv-fill-{{ section.id }} { to { width: 100%; } }
+
+  /* ---------- Media ---------- */
+  #ftv-{{ section.id }} .ftv-media {
+    position: relative;
+    width: 100%;
+    aspect-ratio: {{ section.settings.media_ratio }};
+    border-radius: {{ section.settings.media_radius }}px;
+    overflow: hidden;
+    background: #1a1a1a;
+  }
+  #ftv-{{ section.id }} .ftv-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity .5s ease;
+  }
+  #ftv-{{ section.id }} .ftv-slide.is-active { opacity: 1; }
+  #ftv-{{ section.id }} .ftv-slide video,
+  #ftv-{{ section.id }} .ftv-slide img,
+  #ftv-{{ section.id }} .ftv-slide svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 749px) {
+    #ftv-{{ section.id }} .ftv-head { margin-bottom: 28px; }
+    #ftv-{{ section.id }} .ftv-card {
+      grid-template-columns: 1fr;
+      gap: 26px;
+      padding: 16px 16px 28px;
+      border-radius: {{ section.settings.card_radius | times: 0.6 | round }}px;
+    }
+    #ftv-{{ section.id }} .ftv-media-wrap { order: -1; }
+    #ftv-{{ section.id }} .ftv-list { padding: 0 8px; }
+    #ftv-{{ section.id }} .ftv-item + .ftv-item { margin-top: 20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #ftv-{{ section.id }} .ftv-panel,
+    #ftv-{{ section.id }} .ftv-desc,
+    #ftv-{{ section.id }} .ftv-slide { transition: none !important; }
+  }
+</style>
+
+<section
+  id="ftv-{{ section.id }}"
+  class="{% if section.settings.auto_rotate %}ftv-auto{% endif %}"
+  style="--ftv-duration: {{ section.settings.rotate_speed }}s;"
+>
+  <div class="ftv-inner">
+    <div class="ftv-head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="ftv-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="ftv-heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+    </div>
+
+    <div class="ftv-card">
+      <ul class="ftv-list">
+        {%- for block in section.blocks -%}
+          <li class="ftv-item{% if forloop.first %} is-active{% endif %}" data-index="{{ forloop.index0 }}" {{ block.shopify_attributes }}>
+            <button
+              type="button"
+              class="ftv-tab"
+              aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+              aria-controls="ftv-desc-{{ block.id }}"
+            >
+              {{ block.settings.title }}
+            </button>
+            <div class="ftv-panel" id="ftv-desc-{{ block.id }}">
+              <div class="ftv-panel-inner">
+                {%- if block.settings.text != blank -%}
+                  <div class="ftv-desc">{{ block.settings.text }}</div>
+                {%- endif -%}
+                <div class="ftv-progress"><span></span></div>
+              </div>
+            </div>
+          </li>
+        {%- endfor -%}
+      </ul>
+
+      <div class="ftv-media-wrap">
+        <div class="ftv-media">
+          {%- for block in section.blocks -%}
+            <div class="ftv-slide{% if forloop.first %} is-active{% endif %}" data-index="{{ forloop.index0 }}">
+              {%- if block.settings.video != blank -%}
+                {{ block.settings.video
+                  | video_tag:
+                    autoplay: false,
+                    loop: true,
+                    muted: true,
+                    playsinline: true,
+                    controls: false,
+                    preload: 'metadata',
+                    image_size: '900x'
+                }}
+              {%- elsif block.settings.video_url != blank -%}
+                <video
+                  src="{{ block.settings.video_url }}"
+                  {% if block.settings.poster != blank %}poster="{{ block.settings.poster | image_url: width: 900 }}"{% endif %}
+                  loop muted playsinline preload="metadata"
+                ></video>
+              {%- elsif block.settings.poster != blank -%}
+                {{ block.settings.poster | image_url: width: 1000 | image_tag: loading: 'lazy', alt: block.settings.title }}
+              {%- else -%}
+                {{ 'product-apparel-3' | placeholder_svg_tag }}
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('ftv-{{ section.id }}');
+    if (!root || root.dataset.ftvReady) return;
+    root.dataset.ftvReady = '1';
+
+    var items = Array.prototype.slice.call(root.querySelectorAll('.ftv-item'));
+    var slides = Array.prototype.slice.call(root.querySelectorAll('.ftv-slide'));
+    var autoRotate = {{ section.settings.auto_rotate | json }};
+    var speed = {{ section.settings.rotate_speed | times: 1000 }};
+    var current = 0, timer = null, inView = false;
+
+    function playActive() {
+      slides.forEach(function (s, i) {
+        var v = s.querySelector('video');
+        if (!v) return;
+        v.muted = true;
+        if (i === current && inView) {
+          try { v.currentTime = 0; } catch (e) {}
+          var p = v.play(); if (p && p.catch) p.catch(function () {});
+        } else {
+          v.pause();
+        }
+      });
+    }
+
+    function restartTimer() {
+      clearTimeout(timer);
+      if (!autoRotate || !inView || items.length < 2) return;
+      timer = setTimeout(function () { activate((current + 1) % items.length); }, speed);
+    }
+
+    function activate(index) {
+      current = index;
+      items.forEach(function (it, i) {
+        var on = i === index;
+        it.classList.toggle('is-active', on);
+        it.querySelector('.ftv-tab').setAttribute('aria-expanded', on ? 'true' : 'false');
+        /* restart progress animation */
+        var bar = it.querySelector('.ftv-progress span');
+        if (bar) { bar.style.animation = 'none'; bar.offsetHeight; bar.style.animation = ''; }
+      });
+      slides.forEach(function (s, i) { s.classList.toggle('is-active', i === index); });
+      playActive();
+      restartTimer();
+    }
+
+    items.forEach(function (it, i) {
+      it.querySelector('.ftv-tab').addEventListener('click', function () {
+        if (i !== current) activate(i);
+      });
+    });
+
+    /* pause auto-rotate on hover */
+    var card = root.querySelector('.ftv-card');
+    card.addEventListener('mouseenter', function () {
+      if (!autoRotate) return;
+      clearTimeout(timer); root.classList.add('ftv-paused');
+    });
+    card.addEventListener('mouseleave', function () {
+      if (!autoRotate) return;
+      root.classList.remove('ftv-paused'); activate(current);
+    });
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          inView = en.isIntersecting;
+          if (inView) { activate(current); } else { clearTimeout(timer); playActive(); }
+        });
+      }, { threshold: 0.3 }).observe(root);
+    } else {
+      inView = true; activate(0);
+    }
+
+    /* Theme editor: clicking a block in the sidebar opens it */
+    document.addEventListener('shopify:block:select', function (e) {
+      var idx = items.indexOf(e.target);
+      if (idx > -1) activate(idx);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Feature Tabs + Video",
+  "tag": "div",
+  "class": "section-feature-tabs-video",
+  "settings": [
+    { "type": "header", "content": "Content" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow text", "default": "Pediatrician-approved" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Designed for how kids' feet actually grow" },
+    { "type": "checkbox", "id": "auto_rotate", "label": "Auto-switch features", "default": false, "info": "Moves to the next feature automatically, with a progress bar. Pauses on hover." },
+    { "type": "range", "id": "rotate_speed", "label": "Seconds per feature", "min": 3, "max": 15, "step": 1, "unit": "s", "default": 6 },
+
+    { "type": "header", "content": "Fonts" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Fonts", "default": true, "info": "Turn off to use your theme's fonts instead." },
+    { "type": "text", "id": "heading_font", "label": "Heading font (Google Font name)", "default": "Oswald" },
+    {
+      "type": "select",
+      "id": "heading_weight",
+      "label": "Heading weight",
+      "options": [
+        { "value": "400", "label": "Regular" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semibold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "500",
+      "info": "Use Regular if your heading font is Anton."
+    },
+    { "type": "text", "id": "body_font", "label": "Body font (Google Font name)", "default": "Inter" },
+
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "max_width", "label": "Content width", "min": 800, "max": 1600, "step": 20, "unit": "px", "default": 1260 },
+    { "type": "range", "id": "media_width", "label": "Video width (desktop)", "min": 300, "max": 700, "step": 20, "unit": "px", "default": 400 },
+    {
+      "type": "select",
+      "id": "media_ratio",
+      "label": "Video shape",
+      "options": [
+        { "value": "1 / 1", "label": "Square" },
+        { "value": "4 / 5", "label": "Portrait (4:5)" },
+        { "value": "3 / 4", "label": "Portrait (3:4)" },
+        { "value": "4 / 3", "label": "Landscape (4:3)" }
+      ],
+      "default": "1 / 1"
+    },
+
+    { "type": "header", "content": "Colors" },
+    { "type": "color", "id": "bg_color", "label": "Section background", "default": "#FDF8EE" },
+    { "type": "color", "id": "card_color", "label": "Card background", "default": "#000000" },
+    { "type": "color", "id": "eyebrow_color", "label": "Eyebrow color", "default": "#2B2BE0" },
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#111111" },
+    { "type": "color", "id": "active_color", "label": "Active feature title", "default": "#FFFFFF" },
+    { "type": "color", "id": "inactive_color", "label": "Inactive feature title", "default": "#8A8A8A" },
+    { "type": "color", "id": "hover_color", "label": "Inactive title on hover", "default": "#C4C4C4" },
+    { "type": "color", "id": "text_color", "label": "Description text", "default": "#E6E6E6" },
+
+    { "type": "header", "content": "Style" },
+    { "type": "range", "id": "heading_size", "label": "Section heading max size", "min": 28, "max": 72, "step": 2, "unit": "px", "default": 38 },
+    { "type": "range", "id": "item_size", "label": "Feature title size", "min": 18, "max": 40, "step": 2, "unit": "px", "default": 26 },
+    { "type": "range", "id": "card_radius", "label": "Card corner radius", "min": 0, "max": 48, "step": 4, "unit": "px", "default": 32 },
+    { "type": "range", "id": "media_radius", "label": "Video corner radius", "min": 0, "max": 30, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 40 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 48 }
+  ],
+  "blocks": [
+    {
+      "type": "feature",
+      "name": "Feature",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Feature title" },
+        { "type": "richtext", "id": "text", "label": "Description", "default": "<p>Describe this feature.</p>" },
+        { "type": "video", "id": "video", "label": "Video (upload to Shopify)", "info": "Best: MP4, under 10 MB, 5–10 sec loop, no sound." },
+        { "type": "url", "id": "video_url", "label": "Or external video URL (.mp4)", "info": "Used only if no video is uploaded above." },
+        { "type": "image_picker", "id": "poster", "label": "Fallback image / poster" }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "Feature Tabs + Video",
+      "blocks": [
+        { "type": "feature", "settings": { "title": "Always the Right Size", "text": "<p>Supergrooves™ is a patented expansion technology that adapts with growing feet, keeping shoes comfortable and always the right size</p>" } },
+        { "type": "feature", "settings": { "title": "Room for Toes to Grow", "text": "<p>A wide toe box lets toes spread naturally instead of being squeezed.</p>" } },
+        { "type": "feature", "settings": { "title": "Healthy Posture & Balance", "text": "<p>A flat, flexible sole supports a natural gait and steady balance.</p>" } },
+        { "type": "feature", "settings": { "title": "All day Breathable comfort", "text": "<p>Breathable knit keeps little feet cool and dry from school to playground.</p>" } },
+        { "type": "feature", "settings": { "title": "Soft Cushioning, Barefoot Feel", "text": "<p>SquishyFoam insole absorbs impact while supporting natural foot movement.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

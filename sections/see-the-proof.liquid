@@ -1,0 +1,238 @@
+{%- liquid
+  assign hf = section.settings.heading_font | strip | replace: ' ', '+'
+  assign bf = section.settings.body_font | strip | replace: ' ', '+'
+-%}
+
+{%- if section.settings.load_google_fonts -%}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family={{ hf }}:wght@{{ section.settings.heading_weight }}&family={{ bf }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+{%- endif -%}
+
+<style>
+  #stp-{{ section.id }} {
+    --stp-heading-font: {% if section.settings.load_google_fonts %}'{{ section.settings.heading_font }}', {% endif %}var(--font-heading-family, sans-serif);
+    --stp-body-font: {% if section.settings.load_google_fonts %}'{{ section.settings.body_font }}', {% endif %}var(--font-body-family, sans-serif);
+    background: {{ section.settings.bg_color }};
+    padding: {{ section.settings.padding_top }}px 20px {{ section.settings.padding_bottom }}px;
+    font-family: var(--stp-body-font);
+  }
+  #stp-{{ section.id }} .stp-inner {
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+  }
+  #stp-{{ section.id }} .stp-head { text-align: center; margin-bottom: 48px; }
+  #stp-{{ section.id }} .stp-eyebrow {
+    font-family: var(--stp-body-font);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: {{ section.settings.eyebrow_color }};
+    margin: 0 0 12px;
+  }
+  #stp-{{ section.id }} .stp-heading {
+    font-family: var(--stp-heading-font);
+    font-weight: {{ section.settings.heading_weight }};
+    font-size: clamp(28px, 4vw, {{ section.settings.heading_size }}px);
+    line-height: 1.1;
+    text-transform: uppercase;
+    color: {{ section.settings.heading_color }};
+    margin: 0;
+  }
+  #stp-{{ section.id }} .stp-grid {
+    display: grid;
+    grid-template-columns: repeat({{ section.settings.columns }}, 1fr);
+    gap: 20px;
+  }
+  #stp-{{ section.id }} .stp-card {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: {{ section.settings.radius }}px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  #stp-{{ section.id }} .stp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+  }
+  #stp-{{ section.id }} .stp-media {
+    position: relative;
+    aspect-ratio: {{ section.settings.image_ratio }};
+    background: #f1e2cc;
+    overflow: hidden;
+  }
+  #stp-{{ section.id }} .stp-media img,
+  #stp-{{ section.id }} .stp-media svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .6s ease;
+  }
+  #stp-{{ section.id }} .stp-card:hover .stp-media img { transform: scale(1.03); }
+  #stp-{{ section.id }} .stp-body { padding: 20px 20px 22px; }
+  #stp-{{ section.id }} .stp-title {
+    font-family: var(--stp-body-font);
+    font-size: 17px;
+    font-weight: 600;
+    color: #111;
+    margin: 0 0 10px;
+  }
+  #stp-{{ section.id }} .stp-text {
+    font-family: var(--stp-body-font);
+    font-size: 14px;
+    line-height: 1.5;
+    color: #555;
+  }
+  #stp-{{ section.id }} .stp-text p { margin: 0; }
+
+  @media (max-width: 749px) {
+    #stp-{{ section.id }} .stp-grid { grid-template-columns: 1fr; gap: 16px; }
+    #stp-{{ section.id }} .stp-head { margin-bottom: 32px; }
+  }
+</style>
+
+<section id="stp-{{ section.id }}">
+  <div class="stp-inner">
+    <div class="stp-head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="stp-eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 class="stp-heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+    </div>
+
+    <div class="stp-grid">
+      {%- for block in section.blocks -%}
+        <div class="stp-card" {{ block.shopify_attributes }}>
+          <div class="stp-media">
+            {%- if block.settings.image != blank -%}
+              {{ block.settings.image
+                | image_url: width: 1400
+                | image_tag:
+                  loading: 'lazy',
+                  widths: '400, 600, 900, 1200, 1400',
+                  sizes: '(min-width: 750px) 50vw, 100vw',
+                  alt: block.settings.image.alt
+              }}
+            {%- else -%}
+              {{ 'product-apparel-1' | placeholder_svg_tag }}
+            {%- endif -%}
+          </div>
+          <div class="stp-body">
+            {%- if block.settings.title != blank -%}
+              <h3 class="stp-title">{{ block.settings.title }}</h3>
+            {%- endif -%}
+            {%- if block.settings.text != blank -%}
+              <div class="stp-text">{{ block.settings.text }}</div>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "See The Proof",
+  "tag": "div",
+  "class": "section-see-the-proof",
+  "settings": [
+    { "type": "header", "content": "Content" },
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow text", "default": "See the proof" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Bend it. Watch it grow." },
+
+    { "type": "header", "content": "Fonts" },
+    { "type": "checkbox", "id": "load_google_fonts", "label": "Use custom Google Fonts", "default": true, "info": "Turn off to use your theme's fonts instead." },
+    { "type": "text", "id": "heading_font", "label": "Heading font (Google Font name)", "default": "Oswald" },
+    {
+      "type": "select",
+      "id": "heading_weight",
+      "label": "Heading weight",
+      "options": [
+        { "value": "400", "label": "Regular" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semibold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "700",
+      "info": "Use Regular if your heading font is Anton."
+    },
+    { "type": "text", "id": "body_font", "label": "Body font (Google Font name)", "default": "Inter" },
+
+    { "type": "header", "content": "Layout" },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Cards per row (desktop)",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image shape",
+      "options": [
+        { "value": "4 / 3", "label": "Landscape (4:3)" },
+        { "value": "1 / 1", "label": "Square" },
+        { "value": "3 / 4", "label": "Portrait (3:4)" },
+        { "value": "16 / 9", "label": "Wide (16:9)" }
+      ],
+      "default": "4 / 3"
+    },
+    { "type": "range", "id": "max_width", "label": "Content width", "min": 600, "max": 1400, "step": 20, "unit": "px", "default": 920 },
+
+    { "type": "header", "content": "Style" },
+    { "type": "color", "id": "bg_color", "label": "Background", "default": "#F3F4F6" },
+    { "type": "color", "id": "eyebrow_color", "label": "Eyebrow color", "default": "#2B2BE0" },
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#111111" },
+    { "type": "range", "id": "heading_size", "label": "Heading max size", "min": 28, "max": 72, "step": 2, "unit": "px", "default": 38 },
+    { "type": "range", "id": "radius", "label": "Card corner radius", "min": 0, "max": 30, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "padding_top", "label": "Padding top", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 32 },
+    { "type": "range", "id": "padding_bottom", "label": "Padding bottom", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 48 }
+  ],
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Proof card",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Recommended: 1400 × 1050 px" },
+        { "type": "text", "id": "title", "label": "Title", "default": "Card title" },
+        { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Describe what this image shows.</p>" }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "See The Proof",
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "title": "The flex test",
+            "text": "<p>A sole this flexible moves with little feet instead of fighting them — that's the pediatrician-approved difference.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "title": "The expansion grooves",
+            "text": "<p>These grooves widen as your child's foot grows — the reason one pair covers three sizes.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
